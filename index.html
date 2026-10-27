@@ -1,0 +1,2368 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head><meta name="format-detection" content="telephone=no"><link rel="stylesheet" href="demo.css"><script src="data.js"></script><script src="demo.js"></script>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Ritim</title>
+<link href="fonts/fonts.css" rel="stylesheet">
+<style>
+:root{
+  --bone:#E4E9E6; --card:#F3F6F4; --ink:#0F2429; --mute:#65777A;
+  --rule:#C6D2CE; --live:#1C6A5C; --urge:#8E2B22; --dim:#D3DCD8;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bone:#0B1A1D; --card:#132529; --ink:#DFE8E4; --mute:#8299A0;
+    --rule:#26403F; --live:#4FA893; --urge:#D0655A; --dim:#1D3337;
+  }
+}
+:root[data-theme="dark"]{
+  --bone:#0B1A1D; --card:#132529; --ink:#DFE8E4; --mute:#8299A0;
+  --rule:#26403F; --live:#4FA893; --urge:#D0655A; --dim:#1D3337;
+}
+*,*::before,*::after{box-sizing:inherit}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0;background:var(--bone);color:var(--ink);
+  font-family:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  font-size:16px;line-height:1.45;
+  padding:20px 18px 40px;
+}
+.wrap{max-width:440px;margin:0 auto}
+h1{font-family:"Source Serif 4",Georgia,serif;font-weight:400;font-size:30px;letter-spacing:-.01em;margin:0}
+.sub{color:var(--mute);font-size:13.5px;margin:3px 0 22px}
+
+/* ---- rhythm strip ---- */
+.strip{background:var(--card);border:1px solid var(--rule);border-radius:3px;padding:16px 14px 12px;margin-bottom:22px}
+.lane{margin-bottom:14px}
+.lane:last-of-type{margin-bottom:6px}
+.lane-h{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:7px}
+.lane-h b{font-weight:500;font-size:13.5px}
+.lane-h span{font-family:"Source Serif 4",serif;font-size:13px;color:var(--mute)}
+.marks{display:flex;gap:3px;align-items:flex-end;height:30px}
+.mk{flex:1;border-radius:1px;background:var(--dim);height:9px;transition:height .18s,background .18s}
+.mk.on{background:var(--live);height:26px}
+.mk.today{outline:1.5px solid var(--ink);outline-offset:1.5px}
+.axis{display:flex;justify-content:space-between;font-size:11px;color:var(--mute);margin-top:6px}
+
+/* ---- today ---- */
+h2{font-size:12.5px;font-weight:600;letter-spacing:.02em;margin:0 0 9px;color:var(--mute)}
+.row{
+  width:100%;display:flex;align-items:center;gap:12px;text-align:left;
+  background:var(--card);border:1px solid var(--rule);border-radius:3px;
+  padding:13px 14px;margin-bottom:7px;color:inherit;font:inherit;cursor:pointer;
+}
+.row:focus-visible{outline:2px solid var(--live);outline-offset:2px}
+.box{width:19px;height:19px;flex:none;border:1.5px solid var(--mute);border-radius:2px;position:relative}
+.row[aria-pressed="true"] .box{background:var(--live);border-color:var(--live)}
+.row[aria-pressed="true"] .box::after{
+  content:"";position:absolute;left:5.5px;top:2px;width:5px;height:10px;
+  border:solid var(--card);border-width:0 2px 2px 0;transform:rotate(43deg)
+}
+.row[aria-pressed="true"] .txt{color:var(--mute)}
+.txt{flex:1;min-width:0}
+.txt b{display:block;font-weight:500;font-size:15px}
+.txt small{display:block;color:var(--mute);font-size:12.5px;margin-top:1px}
+.clock{font-family:"Source Serif 4",serif;font-size:14px;color:var(--mute);flex:none}
+.big b{font-size:16px}
+
+/* ---- urge ---- */
+.urge{
+  width:100%;margin:22px 0 10px;padding:17px;border:1.5px solid var(--urge);
+  background:transparent;color:var(--urge);border-radius:3px;cursor:pointer;
+  font:500 16px/1.2 "IBM Plex Sans",sans-serif;
+}
+.urge:active{background:var(--urge);color:var(--bone)}
+
+/* ---- facts ---- */
+.facts{border-top:1px solid var(--rule);margin-top:26px;padding-top:16px}
+.fact{display:flex;justify-content:space-between;gap:14px;padding:6px 0;font-size:14px}
+.fact span{color:var(--mute)}
+.fact b{font-family:"Source Serif 4",serif;font-weight:400}
+.note{font-size:12.5px;color:var(--mute);margin-top:18px;line-height:1.5}
+.note a{color:inherit}
+
+/* ---- overlay ---- */
+.ov{
+  position:fixed;inset:0;background:var(--bone);z-index:9;display:none;
+  flex-direction:column;align-items:center;justify-content:center;gap:26px;
+  padding:calc(24px + env(safe-area-inset-top,0px)) 26px calc(24px + env(safe-area-inset-bottom,0px));
+  text-align:center;
+}
+.ov.show{display:flex}
+.pacer{width:128px;height:128px;border-radius:50%;border:1.5px solid var(--rule);display:grid;place-items:center;position:relative}
+.orb{width:56px;height:56px;border-radius:50%;background:var(--live);opacity:.85;animation:br 10s ease-in-out infinite}
+@keyframes br{0%,100%{transform:scale(.55)}40%{transform:scale(1.5)}60%{transform:scale(1.5)}}
+@media (prefers-reduced-motion:reduce){.orb{animation:none;transform:scale(1)}}
+.cue{position:absolute;bottom:-24px;font-size:12.5px;color:var(--mute)}
+.cd{font-family:"Source Serif 4",serif;font-size:56px;font-weight:300;line-height:1}
+.line{font-family:"Source Serif 4",serif;font-size:19px;max-width:20em;min-height:3.2em;line-height:1.5}
+.ghost{background:none;border:none;color:var(--mute);font:inherit;font-size:14px;text-decoration:underline;cursor:pointer;padding:8px}
+
+/* ---- native (Android) additions ---- */
+html:not(.native) .native-only{display:none}
+.head{display:flex;justify-content:space-between;align-items:baseline;gap:12px}
+.head .ghost{padding:6px 0 6px 12px}
+.warn{border:1.5px solid var(--urge);border-radius:3px;padding:12px 14px;margin:-8px 0 22px;color:var(--urge);font-size:14px}
+.warn p{margin:0 0 10px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+.warn p:last-child{margin-bottom:0}
+.mini{flex:none;background:none;border:1px solid currentColor;color:inherit;border-radius:3px;font:500 13px/1.2 "IBM Plex Sans",sans-serif;padding:7px 10px;cursor:pointer}
+.sheet{position:fixed;inset:0;z-index:10;display:none;overflow-y:auto;background:var(--bone);
+  padding:calc(20px + env(safe-area-inset-top,0px)) 18px calc(40px + env(safe-area-inset-bottom,0px))}
+.sheet.show{display:block}
+.sheet h2{margin-top:24px}
+.set{display:flex;align-items:center;gap:12px;background:var(--card);border:1px solid var(--rule);border-radius:3px;padding:10px 14px;margin-bottom:7px}
+.set input{flex:none;font:400 15px "Source Serif 4",Georgia,serif;color:var(--ink);background:var(--bone);border:1px solid var(--rule);border-radius:3px;padding:6px 8px;color-scheme:light dark}
+.set input:focus-visible{outline:2px solid var(--live);outline-offset:1px}
+.btn{width:100%;margin:8px 0 0;padding:14px;border:1.5px solid var(--live);background:transparent;color:var(--live);border-radius:3px;font:500 15px/1.2 "IBM Plex Sans",sans-serif;cursor:pointer}
+.btn:active{background:var(--live);color:var(--bone)}
+.chk{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:9px 0;font-size:14px;border-bottom:1px solid var(--rule)}
+.chk .mini{color:var(--urge)}
+.ok{color:var(--live)}
+.bad{color:var(--urge)}
+.msg{font-size:13px;color:var(--mute);margin:8px 0 0;min-height:1.2em}
+.empty{color:var(--mute);font-size:14px;margin:0 0 7px}
+.doc{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid var(--rule);font-size:14px}
+.doc .txt b{font-weight:500;font-size:14.5px}
+.doc a.mini{color:var(--live);text-decoration:none}
+.field{display:block;margin:0 0 14px}
+.field>span{display:block;font-size:12.5px;color:var(--mute);margin-bottom:5px}
+.field input,.field textarea,.field select{width:100%;font:400 16px "IBM Plex Sans",system-ui,sans-serif;color:var(--ink);background:var(--card);border:1px solid var(--rule);border-radius:3px;padding:10px 12px;color-scheme:light dark;resize:vertical}
+.field input:focus-visible,.field textarea:focus-visible,.field select:focus-visible{outline:2px solid var(--live);outline-offset:1px}
+.trow{display:flex;gap:8px;align-items:center;margin-bottom:7px}
+.trow input{flex:1}
+.btn.danger{border-color:var(--urge);color:var(--urge)}
+.btn.danger:active{background:var(--urge);color:var(--bone)}
+#form{z-index:13}
+#form-body{margin-top:18px}
+#form-msg{color:var(--urge)}
+.row.dim .txt b{color:var(--mute);font-weight:400}
+#card-body{margin-top:18px}
+.card-id{font-size:18px;margin:0 0 18px}
+.card-sec{margin:0 0 22px}
+.card-sec h2{margin-top:0}
+.card-lead{font-size:16px;margin:0 0 6px}
+.card-text{font-size:16px;margin:0;white-space:pre-line}
+.kv{display:flex;justify-content:space-between;align-items:center;gap:14px;padding:9px 0;border-bottom:1px solid var(--rule);font-size:16px}
+.kv>span{color:var(--mute);flex:none}
+.kv>b{font-weight:500;text-align:right}
+.stent{padding:10px 0;border-bottom:1px solid var(--rule)}
+.stent b{display:block;font-weight:500;font-size:16.5px}
+.stent small{display:block;color:var(--mute);font-size:14px;margin-top:2px}
+#files-sheet{z-index:11}
+.tabs{display:flex;gap:6px;margin:0 0 14px}
+.tab{flex:1;background:var(--card);border:1px solid var(--rule);border-radius:3px;padding:9px 4px;font:500 13.5px "IBM Plex Sans",sans-serif;color:var(--mute);cursor:pointer}
+.tab[aria-selected="true"]{border-color:var(--live);color:var(--live)}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:8px}
+.grid .tile{position:relative;aspect-ratio:1/1;background:var(--dim);border:none;border-radius:3px;padding:0;overflow:hidden;cursor:pointer;color:var(--ink)}
+.grid .tile img{width:100%;height:100%;object-fit:cover;display:block}
+.grid .tile .cap{position:absolute;left:0;right:0;bottom:0;padding:14px 5px 3px;font-size:10.5px;line-height:1.25;color:#fff;background:linear-gradient(transparent,rgba(0,0,0,.75));text-align:left}
+.grid .tile .dur{position:absolute;top:4px;right:4px;font-size:10.5px;color:#fff;background:rgba(0,0,0,.6);border-radius:2px;padding:1px 4px}
+.grid .tile .glyph{display:grid;place-items:center;height:100%;font:600 15px "IBM Plex Sans",sans-serif;color:var(--urge)}
+.grid .tile.missing{outline:1.5px dashed var(--urge)}
+.addmenu .btn{margin-top:6px}
+#viewer{position:fixed;inset:0;z-index:12;display:none;flex-direction:column;background:#0b0d0e;color:#e8ecea;
+  padding:calc(8px + env(safe-area-inset-top,0px)) 0 calc(8px + env(safe-area-inset-bottom,0px))}
+#viewer.show{display:flex}
+.vbar{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 12px}
+.vbar .ghost{color:#cfd6d3}
+#viewer .mini{color:#e8ecea;border-color:#5a6461}
+#viewer .mini[aria-pressed="true"]{border-color:#e8ecea;background:#25302e}
+#viewer .mini:disabled{opacity:.35}
+#viewer-title{flex:1;min-width:0;font-size:14px;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#viewer-stage{flex:1;overflow:hidden;display:flex;align-items:center;justify-content:center;touch-action:none}
+#viewer-stage img{max-width:100%;max-height:100%;transform-origin:0 0;user-select:none;-webkit-user-drag:none}
+#viewer-stage video{width:100%;max-height:100%;background:#000}
+#import-ov{position:fixed;inset:0;z-index:14;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.55)}
+#import-ov.show{display:flex}
+#metrics{z-index:11}
+#privacy{z-index:12}
+#m-body{margin-top:14px}
+.m-big{font-family:"Source Serif 4",Georgia,serif;font-size:34px;font-weight:300;line-height:1.1;margin:0}
+.m-big small{font-family:"IBM Plex Sans",sans-serif;font-size:14px;font-weight:400;color:var(--mute)}
+.m-sub{font-size:13.5px;color:var(--mute);margin:3px 0 0}
+.mbars{display:flex;gap:4px;align-items:flex-end;height:64px;margin-top:12px}
+.mbars i{flex:1;min-height:2px;background:var(--live);opacity:.4;border-radius:1px}
+.mbars i.now{opacity:1}
+.mlab{display:flex;gap:4px;margin-top:4px}
+.mlab span{flex:1;text-align:center;font-size:11px;color:var(--mute)}
+.mline{display:block;width:100%;height:70px;margin-top:10px;overflow:visible}
+.mline.sm{height:34px;margin:4px 0 6px}
+.mline polyline{fill:none;stroke:var(--live);stroke-width:2;vector-effect:non-scaling-stroke;stroke-linejoin:round;stroke-linecap:round}
+.stages{display:flex;height:12px;border-radius:2px;overflow:hidden;margin:10px 0 6px;background:var(--dim)}
+.st-deep{background:var(--live)}
+.st-rem{background:var(--live);opacity:.65}
+.st-light{background:var(--live);opacity:.3}
+.st-awake{background:var(--urge);opacity:.6}
+.lg{display:inline-flex;align-items:center;gap:5px;margin:0 12px 4px 0;font-size:13px;color:var(--mute)}
+.lg i{width:9px;height:9px;border-radius:1px}
+.walk{display:flex;justify-content:space-between;gap:12px;padding:8px 0;border-bottom:1px solid var(--rule);font-size:15px}
+.walk span{color:var(--mute)}
+.chk .mini.ok{color:var(--live)}
+.priv{margin:16px 0 0;padding-left:18px}
+.priv li{font-size:15px;margin-bottom:10px}
+#bp-report{z-index:12}
+#day{z-index:13}
+.daynav{display:flex;justify-content:space-between;margin:12px 0 18px}
+.daynav .mini{color:var(--live)}
+.daynav .mini:disabled{opacity:.35}
+.mchart{position:relative}
+.hits{position:absolute;inset:0;display:flex}
+.hits button,.mbars button{flex:1;background:none;border:0;padding:0;margin:0;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.hits button:focus-visible,.mbars button:focus-visible{outline:2px solid var(--live);outline-offset:-2px}
+.hits button:active{background:var(--dim);opacity:.5}
+.mbars button{display:flex;align-items:flex-end;height:100%}
+.mbars button i{height:var(--h)}
+.mline polyline.alt{opacity:.45}
+.bp-row{display:flex;justify-content:space-between;gap:12px;width:100%;padding:8px 0;border:0;border-bottom:1px solid var(--rule);background:none;color:inherit;font:inherit;font-size:15px;text-align:left;cursor:pointer}
+.bp-row span{color:var(--mute)}
+.bp-table{width:100%;border-collapse:collapse;font-size:14px;margin-top:12px}
+.bp-table th{font-weight:600;color:var(--mute);text-align:left;padding:6px 4px;border-bottom:1px solid var(--rule)}
+.bp-table td{padding:6px 4px;border-bottom:1px solid var(--rule)}
+#bp-pdf:disabled{opacity:.4}
+html.native body{padding-bottom:calc(84px + env(safe-area-inset-bottom,0px))}
+:root{--tab-bg:#FFFFFF}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--tab-bg:#132529}}
+:root[data-theme="dark"]{--tab-bg:#132529}
+.tabbar{position:fixed;left:0;right:0;bottom:0;z-index:9;display:flex;background:var(--tab-bg);border-top:1px solid var(--rule);padding-bottom:env(safe-area-inset-bottom,0px)}
+html:not(.native) .tabbar{display:none}
+.tabbar button{flex:1;min-height:58px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;background:none;border:0;color:var(--mute);font:500 12px/1.2 "IBM Plex Sans",system-ui,sans-serif;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.tabbar button[aria-selected="true"]{color:var(--live);font-weight:600}
+.tabbar button:focus-visible{outline:2px solid var(--live);outline-offset:-4px}
+.tabbar svg{width:23px;height:23px}
+.panel[hidden]{display:none}
+.ptitle{font-family:"IBM Plex Sans",system-ui,sans-serif;font-weight:600;font-size:26px;letter-spacing:-.01em;margin:0 0 12px}
+.grid .tile{min-height:0;display:block;margin:0;gap:0;border-radius:3px;padding:0}
+#import-ov p{margin:0 24px;padding:18px 22px;border-radius:4px;background:var(--card);color:var(--ink);font-size:15px}
+/* ---- tiles: colour cards (v1.6) ---- */
+
+/* ==========================================================================
+   Ritim tiles (v1.6 card UI)
+   Colour tokens follow the page's existing theme pattern: light on :root,
+   dark in BOTH the media query (not forced light) and [data-theme="dark"].
+   Every bg/ink pair is >= AA 4.5:1 (lowest: med dark 5.98:1, med light 6.43:1).
+   ========================================================================== */
+
+/* ---------- tokens: light ---------- */
+:root{
+  --app-bg:#F6F4EF;
+  --c-med:#1C6A5C;      --c-med-ink:#FFFFFF;
+  --c-quit:#E7EEDC;     --c-quit-ink:#3B5222;
+  --c-bp:#E6E4F4;       --c-bp-ink:#3E3A76;
+  --c-step:#F6E6D6;     --c-step-ink:#7A4518;
+  --c-sleep:#DDE7F2;    --c-sleep-ink:#24466B;
+  --c-heart:#F4E1E4;    --c-heart-ink:#7A2E3D;
+  --c-neutral:#FFFFFF;  --c-neutral-ink:#1D2326; --c-neutral-line:#E6E2DA;
+  /* icon chip + mark-btn surfaces on pastel tiles (overridden in dark) */
+  --tile-ic:rgba(255,255,255,.55);
+  --tile-ctl:rgba(255,255,255,.6);
+}
+
+/* ---------- tokens: dark (system) ---------- */
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --app-bg:#0B1A1D;
+    --c-med:#4FA893;      --c-med-ink:#06201B;
+    --c-quit:#22301A;     --c-quit-ink:#CFE3B5;
+    --c-bp:#26243F;       --c-bp-ink:#CFCBF5;
+    --c-step:#3A2616;     --c-step-ink:#F2CDA8;
+    --c-sleep:#1B2A3B;    --c-sleep-ink:#BFD6EE;
+    --c-heart:#3A1D23;    --c-heart-ink:#F1C2CB;
+    --c-neutral:#132529;  --c-neutral-ink:#DFE8E4; --c-neutral-line:#26403F;
+    --tile-ic:rgba(255,255,255,.08);
+    --tile-ctl:rgba(255,255,255,.07);
+  }
+}
+
+/* ---------- tokens: dark (explicit) ---------- */
+:root[data-theme="dark"]{
+  --app-bg:#0B1A1D;
+  --c-med:#4FA893;      --c-med-ink:#06201B;
+  --c-quit:#22301A;     --c-quit-ink:#CFE3B5;
+  --c-bp:#26243F;       --c-bp-ink:#CFCBF5;
+  --c-step:#3A2616;     --c-step-ink:#F2CDA8;
+  --c-sleep:#1B2A3B;    --c-sleep-ink:#BFD6EE;
+  --c-heart:#3A1D23;    --c-heart-ink:#F1C2CB;
+  --c-neutral:#132529;  --c-neutral-ink:#DFE8E4; --c-neutral-line:#26403F;
+  --tile-ic:rgba(255,255,255,.08);
+  --tile-ctl:rgba(255,255,255,.07);
+}
+
+/* ---------- page ---------- */
+html.native body{background:var(--app-bg)}
+
+.ptitle{
+  font-size:26px;font-weight:600;letter-spacing:-.01em;
+  line-height:1.15;margin:0 0 4px;
+}
+
+/* ---------- grid ---------- */
+.tiles{
+  display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:9px;
+}
+.tiles>.tile{margin-bottom:0}
+
+/* ---------- tile ---------- */
+.tile{
+  /* button / anchor reset */
+  font:inherit;color:inherit;text-align:left;text-decoration:none;
+  width:100%;border:0;margin:0;cursor:pointer;
+  -webkit-tap-highlight-color:transparent;-webkit-appearance:none;appearance:none;
+  /* box */
+  box-sizing:border-box;position:relative;display:flex;flex-direction:column;gap:2px;
+  border-radius:18px;padding:12px;min-height:96px;margin-bottom:9px;
+  background:var(--tile-bg);color:var(--tile-ink);
+  transition:transform 120ms ease;
+}
+.tile:active{transform:scale(.985)}
+.tile:focus-visible{outline:2px solid currentColor;outline-offset:2px}
+.tile.wide{grid-column:1 / -1}
+
+/* colour classes; --tile-bg is reused by mark-btn's check mark */
+.tile.med    {--tile-bg:var(--c-med);    --tile-ink:var(--c-med-ink);  --tile-ic:rgba(255,255,255,.18)}
+.tile.quit   {--tile-bg:var(--c-quit);   --tile-ink:var(--c-quit-ink)}
+.tile.bp     {--tile-bg:var(--c-bp);     --tile-ink:var(--c-bp-ink)}
+.tile.step   {--tile-bg:var(--c-step);   --tile-ink:var(--c-step-ink)}
+.tile.sleep  {--tile-bg:var(--c-sleep);  --tile-ink:var(--c-sleep-ink)}
+.tile.heart  {--tile-bg:var(--c-heart);  --tile-ink:var(--c-heart-ink)}
+.tile.neutral{--tile-bg:var(--c-neutral);--tile-ink:var(--c-neutral-ink);
+  border:1px solid var(--c-neutral-line)}
+
+/* ---------- tile content ---------- */
+.tile-k{
+  display:flex;align-items:center;gap:8px;
+  font-size:12.5px;font-weight:600;opacity:.9;
+}
+.tile-k .ic{
+  width:28px;height:28px;border-radius:9px;flex:0 0 28px;
+  background:var(--tile-ic);display:grid;place-items:center;
+}
+.tile-k .ic svg{width:16px;height:16px;display:block}
+
+.tile-v{
+  font-size:26px;font-weight:600;line-height:1.1;letter-spacing:-.01em;
+  margin-top:4px;font-variant-numeric:tabular-nums;
+}
+.tile-s{display:block;font-size:13px;opacity:.8;line-height:1.35}
+
+/* streak strip: scoped override of .mini / .marks / .mk */
+.tile .tile-mini{display:block;height:28px;margin-top:auto;padding-top:6px;box-sizing:content-box}
+.tile .tile-mini.marks{display:flex;align-items:flex-end;gap:2px;height:28px}
+.tile .tile-mini.marks .mk{
+  flex:1;height:8px;border-radius:2px;
+  background:currentColor;opacity:.3;
+}
+.tile .tile-mini.marks .mk.on{height:22px;opacity:.85}
+.tile .tile-mini.marks .mk.today{outline:1.5px solid currentColor;outline-offset:1px}
+
+/* ---------- full-tile hit area ---------- */
+.tile-hit{
+  position:absolute;inset:0;border:0;padding:0;margin:0;
+  background:none;border-radius:inherit;z-index:0;cursor:pointer;
+  -webkit-tap-highlight-color:transparent;
+}
+.tile-hit:focus-visible{outline:2px solid currentColor;outline-offset:2px}
+/* anything with its own tap sits above the hit layer */
+.tile .mark-btn,.tile .med-list{position:relative;z-index:1}
+
+/* ---------- mark button (scoped .row inside a tile) ---------- */
+.tile .mark-btn{
+  display:flex;align-items:center;gap:10px;
+  margin:8px 0 0;padding:8px 10px;min-height:44px;box-sizing:border-box;
+  border-radius:12px;border:0;background:var(--tile-ctl);
+  color:inherit;font:500 14px "IBM Plex Sans",sans-serif;
+  width:100%;text-align:left;cursor:pointer;-webkit-tap-highlight-color:transparent;
+}
+.tile .mark-btn .box{border-color:currentColor;background:transparent}
+.tile .mark-btn[aria-pressed="true"] .box{background:currentColor;border-color:currentColor}
+.tile .mark-btn[aria-pressed="true"] .box::after{border-color:var(--tile-bg)}
+.tile .mark-btn:focus-visible{outline:2px solid currentColor;outline-offset:2px}
+
+/* ---------- medication card (.tile.med.wide) ---------- */
+.med-card .med-list{margin:4px 0 0}
+.med-card .med-list .row{
+  background:transparent;border:0;border-radius:0;box-shadow:none;
+  border-top:1px solid rgba(255,255,255,.22);
+  padding:11px 2px;margin:0;min-height:48px;box-sizing:border-box;color:inherit;
+  display:flex;align-items:center;gap:10px;width:100%;
+  font:inherit;text-align:left;cursor:pointer;-webkit-tap-highlight-color:transparent;
+}
+.med-card .med-list .row:first-child{border-top:0}
+.med-card .med-list .row .txt{flex:1;min-width:0;color:inherit}
+.med-card .med-list .row .txt b{font-size:15px;font-weight:500}
+.med-card .med-list .row .txt small{opacity:.8;color:inherit}
+.med-card .med-list .row .clock{
+  color:inherit;opacity:.9;font-family:inherit;font-size:14px;font-weight:600;
+  font-variant-numeric:tabular-nums;
+}
+.med-card .med-list .row .box{border-color:rgba(255,255,255,.85);background:transparent}
+.med-card .med-list .row[aria-pressed="true"] .box{background:#fff;border-color:#fff}
+.med-card .med-list .row[aria-pressed="true"] .box::after{border-color:var(--c-med)}
+.med-card .med-list .row[aria-pressed="true"] .txt{opacity:.7}
+.med-card .med-list .row:focus-visible{outline:2px solid currentColor;outline-offset:-2px;border-radius:8px}
+
+/* ---------- settings list ---------- */
+.slist h2{
+  font-size:12.5px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;
+  color:var(--mute);margin:18px 2px 6px;
+}
+.srow{
+  font:500 15px "IBM Plex Sans",sans-serif;color:var(--c-neutral-ink);text-align:left;
+  width:100%;box-sizing:border-box;display:flex;justify-content:space-between;align-items:center;gap:10px;
+  min-height:52px;padding:12px 14px;margin:0 0 7px;
+  background:var(--c-neutral);border:1px solid var(--c-neutral-line);border-radius:14px;
+  cursor:pointer;-webkit-tap-highlight-color:transparent;-webkit-appearance:none;appearance:none;
+  text-decoration:none;
+}
+.srow:focus-visible{outline:2px solid currentColor;outline-offset:2px}
+.srow .sval{color:var(--mute);display:inline-flex;align-items:center;gap:6px;font-size:14px;font-weight:500}
+.srow svg{width:16px;height:16px;flex:0 0 16px}
+.srow.bad .sval{color:var(--urge);font-weight:600}
+
+/* ---------- motion ---------- */
+@media (prefers-reduced-motion:reduce){
+  .tile{transition:none}
+  .tile:active{transform:none}
+}
+/* display:flex on .tile would otherwise override the hidden attribute */
+.tile[hidden],.srow[hidden]{display:none}
+.tile.neutral.wide,.tile.slim{min-height:0}
+/* detail sheets share the tab look */
+html.native .sheet{background:var(--app-bg)}
+.sheet .head h1{font-family:"IBM Plex Sans",system-ui,sans-serif;font-weight:600;font-size:26px;letter-spacing:-.01em}
+/* medication checkboxes follow the card's ink, so they stay visible on the light dark-theme green */
+.med-card .med-list .row .box{border-color:currentColor}
+.med-card .med-list .row[aria-pressed="true"] .box{background:currentColor;border-color:currentColor}
+.med-card .med-list .row[aria-pressed="true"] .box::after{border-color:var(--tile-bg)}
+/* metrics sheet: one section at a time */
+#m-body[data-only] [data-sec]{display:none}
+#m-body[data-only="steps"] [data-sec="steps"],#m-body[data-only="bp"] [data-sec="bp"],#m-body[data-only="rhr"] [data-sec="rhr"],
+#m-body[data-only="sleep"] [data-sec="sleep"],#m-body[data-only="heart"] [data-sec="heart"]{display:block}
+#m-body[data-only] .card-sec>h2{display:none}
+/* mini charts inside tiles */
+.tile svg.tile-mini{width:100%;height:28px;box-sizing:border-box;transform:translateZ(0)} /* own layer: without it WebView left a blank band above (seen on the emulator GPU) */
+.tile .tile-mini.mbars{display:flex;align-items:flex-end;gap:3px;height:28px;margin-top:auto}
+.tile .tile-mini.mbars i{flex:1;background:currentColor;opacity:.35;border-radius:2px;min-height:3px}
+.tile .tile-mini.mbars i.now{opacity:.9}
+#o-last{margin-bottom:14px}
+/* settings sheet: one group at a time; its own heading is the sheet title */
+#sheet[data-group] .sgroup{display:none}
+#sheet[data-group="meds"] .sgroup[data-group="meds"],#sheet[data-group="docs"] .sgroup[data-group="docs"],#sheet[data-group="appts"] .sgroup[data-group="appts"],#sheet[data-group="health"] .sgroup[data-group="health"],#sheet[data-group="files"] .sgroup[data-group="files"],#sheet[data-group="hc"] .sgroup[data-group="hc"],#sheet[data-group="bp"] .sgroup[data-group="bp"],#sheet[data-group="times"] .sgroup[data-group="times"],#sheet[data-group="status"] .sgroup[data-group="status"],#sheet[data-group="tests"] .sgroup[data-group="tests"],#sheet[data-group="next"] .sgroup[data-group="next"]{display:block}
+#sheet[data-group] .sgroup>h2:first-child{display:none}
+.sgroup>h2:first-child{margin-top:24px}
+#tab-kartim .sub,#tab-ayar .sub{margin-bottom:14px}
+/* metric detail takes its topic colour; big values use the tab typeface */
+#m-body[data-only="steps"]{--live:var(--c-step-ink)}
+#m-body[data-only="bp"]{--live:var(--c-bp-ink)}
+#m-body[data-only="rhr"],#m-body[data-only="heart"]{--live:var(--c-heart-ink)}
+#m-body[data-only="sleep"]{--live:var(--c-sleep-ink)}
+.sheet .m-big{font-family:"IBM Plex Sans",system-ui,sans-serif;font-weight:600;letter-spacing:-.01em}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-home" viewBox="0 0 24 24"><path d="M4 11l8-7 8 7v9h-5v-6H9v6H4z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></symbol>
+  <symbol id="i-chart" viewBox="0 0 24 24"><polyline points="3,17 9,11 13,14 21,6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><line x1="3" y1="21" x2="21" y2="21" stroke="currentColor" stroke-width="2"/></symbol>
+  <symbol id="i-card" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2.5" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="8.5" cy="11" r="2" fill="none" stroke="currentColor" stroke-width="2"/><line x1="13" y1="10" x2="18" y2="10" stroke="currentColor" stroke-width="2"/><line x1="13" y1="14" x2="17" y2="14" stroke="currentColor" stroke-width="2"/></symbol>
+  <symbol id="i-gear" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 2.8v2.6M12 18.6v2.6M2.8 12h2.6M18.6 12h2.6M5.5 5.5l1.8 1.8M16.7 16.7l1.8 1.8M5.5 18.5l1.8-1.8M16.7 7.3l1.8-1.8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+  <symbol id="i-pill" viewBox="0 0 24 24"><rect x="2.5" y="8" width="19" height="8" rx="4" fill="none" stroke="currentColor" stroke-width="2"/><line x1="12" y1="8" x2="12" y2="16" stroke="currentColor" stroke-width="2"/></symbol>
+  <symbol id="i-heart" viewBox="0 0 24 24"><path d="M12 20s-7.5-4.6-7.5-10.2A4.1 4.1 0 0 1 12 7.4a4.1 4.1 0 0 1 7.5 2.4C19.5 15.4 12 20 12 20z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></symbol>
+  <symbol id="i-pulse" viewBox="0 0 24 24"><polyline points="2,12 7,12 9.5,6 13,18 15.5,12 22,12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-steps" viewBox="0 0 24 24"><path d="M8 3.5c1.9 0 3 2.2 3 5s-1.1 4.5-3 4.5-3-1.7-3-4.5 1.1-5 3-5zM6 15.5h4M16 9.5c1.9 0 3 2.2 3 5s-1.1 4.5-3 4.5-3-1.7-3-4.5 1.1-5 3-5zM14 21.5h4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+  <symbol id="i-bed" viewBox="0 0 24 24"><path d="M3 18V7M3 14h18v4M21 14v-2a3 3 0 0 0-3-3h-7v5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="7" cy="11" r="1.8" fill="none" stroke="currentColor" stroke-width="2"/></symbol>
+  <symbol id="i-nosmoke" viewBox="0 0 24 24"><rect x="2.5" y="12" width="15" height="4" rx="1" fill="none" stroke="currentColor" stroke-width="2"/><line x1="20.5" y1="12" x2="20.5" y2="16" stroke="currentColor" stroke-width="2"/><line x1="4" y1="21" x2="20" y2="3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+  <symbol id="i-noalc" viewBox="0 0 24 24"><path d="M7 3h10l-1 8a4 4 0 0 1-8 0zM12 15v5M8.5 21h7" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/><line x1="4" y1="21" x2="20" y2="3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+  <symbol id="i-cal" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M3 10h18M8 3v4M16 3v4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+  <symbol id="i-doc" viewBox="0 0 24 24"><path d="M6 2.5h8l4.5 4.5V21.5H6z M14 2.5V7h4.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M9 12h6M9 16h6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+  <symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4" fill="none" stroke="currentColor" stroke-width="2"/><path d="M4 21c1-4 4.5-6 8-6s7 2 8 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+  <symbol id="i-stent" viewBox="0 0 24 24"><path d="M5 19L19 5M4 15l5 5M7 12l5 5M10 9l5 5M13 6l5 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+  <symbol id="i-bell" viewBox="0 0 24 24"><path d="M6 17V11a6 6 0 0 1 12 0v6l1.5 2h-15zM10 21h4" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/></symbol>
+  <symbol id="i-test" viewBox="0 0 24 24"><path d="M9 3h6M10 3v6L4.5 19a1.5 1.5 0 0 0 1.3 2.2h12.4a1.5 1.5 0 0 0 1.3-2.2L14 9V3" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/></symbol>
+  <symbol id="i-link" viewBox="0 0 24 24"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+  <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3l8 3v5c0 5-3.4 8.6-8 10-4.6-1.4-8-5-8-10V6z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></symbol>
+  <symbol id="i-chev" viewBox="0 0 24 24"><polyline points="9,5 16,12 9,19" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+</svg>
+<div class="wrap">
+<main id="panels">
+<section class="panel" id="tab-bugun" role="tabpanel" aria-labelledby="tb-bugun">
+  <div class="head"><h1 class="ptitle">Bugün</h1><button class="ghost native-only" id="set-open" hidden>ayarlar</button></div>
+  <p class="sub" id="today">—</p>
+  <div class="warn" id="warn" role="alert" hidden></div>
+
+  <section class="tile med wide med-card" aria-labelledby="med-k">
+    <div class="tile-k" id="med-k"><span class="ic"><svg aria-hidden="true"><use href="#i-pill"/></svg></span><span id="med-count">İlaçlar</span></div>
+    <div id="meds" class="med-list"></div>
+  </section>
+
+  <div class="tiles">
+    <div class="tile quit" id="quit-s">
+      <button class="tile-hit" data-open="quit" aria-label="Sigarasız seri ve son 21 gün"></button>
+      <div class="tile-k"><span class="ic"><svg aria-hidden="true"><use href="#i-nosmoke"/></svg></span>Sigarasız</div>
+      <div class="tile-v" id="s-streak-tile">—</div>
+      <div class="tile-mini marks" id="s-mini" aria-hidden="true"></div>
+      <button class="row mark-btn" id="t-smoke" aria-pressed="false"><span class="box"></span><span class="txt"><b>Bugün içmedim</b></span></button>
+    </div>
+    <div class="tile quit" id="quit-a">
+      <button class="tile-hit" data-open="quit" aria-label="Alkolsüz seri ve son 21 gün"></button>
+      <div class="tile-k"><span class="ic"><svg aria-hidden="true"><use href="#i-noalc"/></svg></span>Alkolsüz</div>
+      <div class="tile-v" id="a-streak-tile">—</div>
+      <div class="tile-mini marks" id="a-mini" aria-hidden="true"></div>
+      <button class="row mark-btn" id="t-alc" aria-pressed="false"><span class="box"></span><span class="txt"><b>Bugün almadım</b></span></button>
+    </div>
+    <button class="tile bp native-only" id="bp-open" hidden><span class="tile-k"><span class="ic"><svg aria-hidden="true"><use href="#i-heart"/></svg></span>Tansiyon</span><span class="tile-v" id="bp-val">—</span><small class="tile-s" id="bp-sub"></small></button>
+    <button class="tile step native-only" id="move-open" hidden><span class="tile-k"><span class="ic"><svg aria-hidden="true"><use href="#i-steps"/></svg></span><b id="move-title" style="font-weight:600">Adım</b></span><span class="tile-v" id="move-val">—</span><small class="tile-s" id="move-sub"></small><span id="move-act" hidden></span></button>
+    <button class="tile neutral wide native-only dim" id="appt-next"><span class="tile-k"><span class="ic"><svg aria-hidden="true"><use href="#i-cal"/></svg></span><b id="appt-title" style="font-weight:600">Kontrol randevusu girilmedi — ekle</b></span><small class="tile-s" id="appt-sub"></small></button>
+  </div>
+
+  <button class="urge" id="urge-btn">İçim gidiyor</button>
+  <p class="note" id="note">Göğüs ağrısı, baskı hissi veya ani nefes darlığında <a href="tel:112">112</a>.</p>
+</section>
+<section class="panel native-only" id="tab-olcum" role="tabpanel" aria-labelledby="tb-olcum" hidden><h1 class="ptitle">Ölçümler</h1>
+  <p class="sub" id="o-last"></p>
+  <div id="o-body"></div>
+</section>
+<section class="panel native-only" id="tab-kartim" role="tabpanel" aria-labelledby="tb-kartim" hidden><h1 class="ptitle">Kartım</h1>
+  <p class="sub">Acil durumda bu sekmeyi göster</p>
+  <div id="k-body"></div>
+  <div class="k-legacy" hidden>
+    <button class="row" id="card-open"><span class="txt"><b>Sağlık kartım</b><small id="card-sub"></small></span><span class="clock">aç</span></button>
+    <button class="row" id="files-open"><span class="txt"><b>Belgelerim</b><small id="files-sub"></small></span><span class="clock">aç</span></button>
+  </div>
+</section>
+<section class="panel native-only" id="tab-ayar" role="tabpanel" aria-labelledby="tb-ayar" hidden><h1 class="ptitle">Ayarlar</h1>
+  <div class="slist" id="a-body"></div>
+    <p class="msg" id="set-version" style="margin-top:22px;text-align:center"></p>
+</section>
+</main>
+</div>
+<nav class="tabbar native-only" role="tablist" aria-label="Bölümler">
+  <button role="tab" id="tb-bugun" data-tab="bugun" aria-selected="true" aria-controls="tab-bugun"><svg aria-hidden="true"><use href="#i-home"/></svg>Bugün</button>
+  <button role="tab" id="tb-olcum" data-tab="olcum" aria-selected="false" aria-controls="tab-olcum" tabindex="-1"><svg aria-hidden="true"><use href="#i-chart"/></svg>Ölçümler</button>
+  <button role="tab" id="tb-kartim" data-tab="kartim" aria-selected="false" aria-controls="tab-kartim" tabindex="-1"><svg aria-hidden="true"><use href="#i-card"/></svg>Kartım</button>
+  <button role="tab" id="tb-ayar" data-tab="ayar" aria-selected="false" aria-controls="tab-ayar" tabindex="-1"><svg aria-hidden="true"><use href="#i-gear"/></svg>Ayarlar</button>
+</nav>
+
+<div class="ov" id="ov" role="dialog" aria-modal="true" aria-label="Kriz anı">
+  <div class="pacer"><div class="orb"></div><span class="cue" id="cue">nefes al</span></div>
+  <div class="cd" id="cd">4:00</div>
+  <p class="line" id="line"></p>
+  <button class="ghost" id="ov-close">kapat</button>
+</div>
+
+<div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-label="Ayarlar">
+  <div class="wrap">
+    <div class="head"><h1 id="sheet-title">Ayarlar</h1><button class="ghost" id="set-close">kapat</button></div>
+
+    <section class="sgroup" data-group="meds">
+    <h2>İlaçlar</h2>
+    <div id="set-meds"></div>
+    <button class="btn" id="med-add">+ İlaç ekle</button>
+    </section>
+
+    <section class="sgroup" data-group="docs">
+    <h2>Doktorlar</h2>
+    <div id="set-docs"></div>
+    <button class="btn" id="doc-add">+ Doktor ekle</button>
+    </section>
+
+    <section class="sgroup" data-group="appts">
+    <h2>Kontrol randevuları</h2>
+    <div id="set-appts"></div>
+    <button class="btn" id="appt-add">+ Randevu ekle</button>
+    </section>
+
+    <section class="sgroup" data-group="health">
+    <h2 id="set-health">Sağlık kartı</h2>
+    <div id="set-health-rows"></div>
+    <button class="btn" id="card-add">+ Kart ekle</button>
+    <div class="addmenu" id="card-menu" hidden>
+      <button class="btn" data-card="profile">Kişisel ve acil bilgiler</button>
+      <button class="btn" data-card="procedure">İşlem bilgisi</button>
+      <button class="btn" data-card="stent">Stent</button>
+      <button class="btn" data-card="note">Diğer</button>
+    </div>
+    </section>
+
+    <section class="sgroup" data-group="files">
+    <h2>Belgeler</h2>
+    <div class="chk"><span id="set-files-info">—</span><button class="mini ok" id="set-files-open">Aç</button></div>
+    <p class="msg">Uygulama kaldırılırsa belgeler silinir; orijinalleri bilgisayarında sakla.</p>
+    </section>
+
+    <section class="sgroup" data-group="hc">
+    <h2>Fitbit / Health Connect</h2>
+    <div id="set-hc"></div>
+    </section>
+
+    <section class="sgroup" data-group="bp">
+    <h2>Tansiyon ölçüm saatleri</h2>
+    <div id="set-bp"></div>
+    <label class="set"><span class="txt"><b>Yeni saat</b><small>her gün; son 1 saatte ölçüm varsa bildirim gelmez</small></span><input type="time" id="bp-new" aria-label="Yeni ölçüm saati"></label>
+    <button class="btn" id="bp-add">+ Saat ekle</button>
+    <p class="msg" id="bp-msg" role="status"></p>
+    </section>
+
+    <section class="sgroup" data-group="times">
+    <h2>Alışkanlık saatleri</h2>
+    <div id="set-times"></div>
+    <button class="btn" id="set-save">Saatleri kaydet</button>
+    <p class="msg" id="set-msg"></p>
+    </section>
+
+    <section class="sgroup" data-group="status">
+    <h2>Sistem durumu</h2>
+    <div id="set-status"></div>
+    </section>
+
+    <section class="sgroup" data-group="tests">
+    <h2>Test</h2>
+    <button class="btn" id="test-med">İlaç bildirimi — 2 dk sonra</button>
+    <button class="btn" id="test-habit">Alışkanlık bildirimi — 2 dk sonra</button>
+    <button class="btn" id="test-walk">Yürüyüş kontrolünü şimdi dene</button>
+    <button class="btn" id="test-bp">Tansiyon kontrolünü şimdi dene</button>
+    <p class="msg" id="test-msg"></p>
+    </section>
+
+    <section class="sgroup" data-group="next">
+    <h2>Sıradaki bildirimler</h2>
+    <div id="set-next"></div>
+    </section>
+
+  </div>
+</div>
+
+<div class="sheet" id="card" role="dialog" aria-modal="true" aria-label="Sağlık kartı">
+  <div class="wrap">
+    <div class="head"><h1>Sağlık kartı</h1><button class="ghost" id="card-close">kapat</button></div>
+    <div id="card-body"></div>
+    <button class="btn" id="card-edit">düzenle</button>
+  </div>
+</div>
+
+<div class="sheet" id="files-sheet" role="dialog" aria-modal="true" aria-label="Belgelerim">
+  <div class="wrap">
+    <div class="head"><h1>Belgelerim</h1><button class="ghost" id="files-close">kapat</button></div>
+    <div class="tabs" id="files-tabs" role="tablist"></div>
+    <div class="grid" id="files-grid"></div>
+    <p class="msg" id="files-msg" role="status"></p>
+    <button class="btn" id="files-add">Ekle</button>
+    <div class="addmenu" id="files-menu" hidden>
+      <button class="btn" data-add="files">Dosya seç</button>
+      <button class="btn" data-add="folder">Klasör seç</button>
+      <button class="btn" data-add="photo">Fotoğraf çek</button>
+    </div>
+  </div>
+</div>
+
+<div class="sheet" id="metrics" role="dialog" aria-modal="true" aria-label="Ölçümlerim">
+  <div class="wrap">
+    <div class="head"><h1 id="metrics-title">Ölçümlerim</h1><button class="ghost" id="metrics-close">kapat</button></div>
+    <p class="sub" id="m-last" style="margin-bottom:0"></p>
+    <div id="m-body"></div>
+    <p class="note">Bu değerler saatinden ve tansiyon aletinden Health Connect üzerinden gelir; değerlendirme için doktoruna danış.</p>
+    <button class="ghost" data-hc="privacy" style="padding-left:0">Verilerini nasıl kullanıyoruz</button>
+  </div>
+</div>
+
+<div class="sheet" id="privacy" role="dialog" aria-modal="true" aria-label="Verilerini nasıl kullanıyoruz">
+  <div class="wrap">
+    <div class="head"><h1>Verilerin</h1><button class="ghost" id="privacy-close">kapat</button></div>
+    <ul class="priv">
+      <li>Ritim, Fitbit'in Health Connect'e yazdığı verileri <b>yalnızca okur</b>; Health Connect'e hiçbir şey yazmaz, değiştirmez, silmez.</li>
+      <li>Okunanlar: adım, egzersiz (yürüyüş), nabız, dinlenme nabzı, HRV, solunum hızı, uyku ve tansiyon.</li>
+      <li>Ne için: "Ölçümlerim" ve gün ekranı, doktor raporu, hafta içi öğle yürüyüşü kontrolü ve tansiyon ölçüm hatırlatmaları.</li>
+      <li>Doktor raporu (PDF) yalnızca sen "PDF paylaş"a dokununca telefonda oluşturulur; nereye gönderileceğini sen seçersin.</li>
+      <li>Veriler telefondan çıkmaz: Ritim'in internet izni yoktur, hiçbir sunucuya gönderilmez.</li>
+      <li>Değerler Ritim'de saklanmaz; ekran her açıldığında Health Connect'ten yeniden okunur. Yalnızca kontrolün çalıştığı saat kaydedilir.</li>
+      <li>Arka planda okuma yalnızca öğle yürüyüşü kontrolü ve tansiyon ölçüm hatırlatması anında yapılır.</li>
+      <li>Ritim tıbbi değerlendirme yapmaz, ölçümlere göre uyarı vermez.</li>
+      <li>İzinleri istediğin zaman geri alabilirsin.</li>
+    </ul>
+    <button class="btn" data-hc="manage">İzinleri yönet</button>
+  </div>
+</div>
+
+<div class="sheet" id="bp-report" role="dialog" aria-modal="true" aria-label="Tansiyon raporu">
+  <div class="wrap">
+    <div class="head"><h1>Tansiyon raporu</h1><button class="ghost" id="bp-report-close">kapat</button></div>
+    <div class="tabs" id="bp-periods" role="tablist" style="margin-top:16px"></div>
+    <div id="bp-report-body"></div>
+    <button class="btn" id="bp-pdf">PDF paylaş</button>
+    <p class="msg" id="bp-pdf-msg" role="status"></p>
+  </div>
+</div>
+
+<div class="sheet" id="day" role="dialog" aria-modal="true" aria-labelledby="day-title">
+  <div class="wrap">
+    <div class="head"><h1 id="day-title">—</h1><button class="ghost" id="day-close">kapat</button></div>
+    <div class="daynav"><button class="mini" id="day-prev" aria-label="Önceki gün">‹ önceki</button><button class="mini" id="day-next" aria-label="Sonraki gün">sonraki ›</button></div>
+    <div id="day-body"></div>
+  </div>
+</div>
+
+<div class="sheet" id="quit" role="dialog" aria-modal="true" aria-label="Sigara ve alkol">
+  <div class="wrap">
+    <div class="head"><h1>Sigara ve alkol</h1><button class="ghost" id="quit-close">kapat</button></div>
+  <section class="strip" aria-label="Son 21 gün">
+    <div class="lane">
+      <div class="lane-h"><b>Sigarasız</b><span id="s-streak">—</span></div>
+      <div class="marks" id="s-marks"></div>
+    </div>
+    <div class="lane">
+      <div class="lane-h"><b>Alkolsüz</b><span id="a-streak">—</span></div>
+      <div class="marks" id="a-marks"></div>
+    </div>
+    <div class="axis"><span>21 gün önce</span><span>bugün</span></div>
+  </section>
+  <section class="facts">
+    <div class="fact"><span>Atlatılan kriz</span><b id="f-urges">0</b></div>
+    <div class="fact"><span>Bu ay temiz gün</span><b id="f-clean">0</b></div>
+    <div class="fact"><span>İçilmeyen sigara</span><b id="f-cigs">0</b></div>
+    <div class="fact"><span>Sıradaki eşik</span><b id="f-next">—</b></div>
+  </section>
+  </div>
+</div>
+
+<div class="sheet" id="people" role="dialog" aria-modal="true" aria-label="Doktorlar">
+  <div class="wrap">
+    <div class="head"><h1>Doktorlar</h1><button class="ghost" id="people-close">kapat</button></div>
+  <section id="docs-sec" hidden style="margin-top:14px">
+    
+    <div id="docs"></div>
+  </section>
+    <button class="btn" data-set-group="docs">Doktorları düzenle</button>
+  </div>
+</div>
+
+<div id="viewer" role="dialog" aria-modal="true" aria-label="Belge">
+  <div class="vbar"><button class="ghost" id="viewer-close">kapat</button><span id="viewer-title"></span><button class="ghost" id="viewer-info">bilgi</button></div>
+  <div id="viewer-stage"></div>
+  <div class="vbar">
+    <button class="mini" id="viewer-prev">‹ önceki</button>
+    <span id="viewer-speed"><button class="mini" data-speed="0.5">0,5×</button> <button class="mini" data-speed="1">1×</button> <button class="mini" data-speed="2">2×</button></span>
+    <button class="mini" id="viewer-share">Paylaş</button>
+    <button class="mini" id="viewer-next">sonraki ›</button>
+  </div>
+</div>
+
+<div id="import-ov" role="status" aria-live="polite"><p id="import-text">Kopyalanıyor…</p></div>
+
+<div class="sheet" id="form" role="dialog" aria-modal="true" aria-labelledby="form-title">
+  <div class="wrap">
+    <div class="head"><h1 id="form-title">İlaç</h1><button class="ghost" id="form-close">kapat</button></div>
+    <div id="form-body"></div>
+    <button class="btn" id="form-save">Kaydet</button>
+    <button class="btn danger" id="form-del">Sil</button>
+    <p class="msg bad" id="form-msg" role="alert"></p>
+  </div>
+</div>
+
+<script>
+(function(){
+  // Browser fallback. On Android both lists come from the native store (applyNative).
+  var SLOTS=[
+    {time:"08:00",label:"Panto, Coraspin, Coversyl",notes:"aç karna, kahvaltıdan yarım saat önce"},
+    {time:"08:45",label:"Tilanta, Beloc ZOK",notes:"kahvaltıdan sonra"},
+    {time:"20:30",label:"Ator, Tilanta",notes:"akşam"}
+  ];
+  var DOCTORS=[];
+  var V1_SLOTS={m1:"08:00",m2:"08:45",m3:"20:30"};
+  var LINES=[
+    "İstek bir dalga. Tepesi üç dakika sürer, sonra kendi kendine iner.",
+    "Şu an yapman gereken tek şey beklemek. Başka hiçbir şey.",
+    "Nefesi uzun ver. Vermek almaktan önemli.",
+    "Sigara stresi azaltmıyor — yoksunluğu bastırıyor. Kaynağı kendisi.",
+    "Stentler takıldı; tek gövde. Bunu bir kez yaşadın.",
+    "Bu dakikayı yarın hatırlamayacaksın bile. Ama saymaya devam edecek.",
+    "Su iç. Ayağa kalk. Odayı değiştir.",
+    "İçersen on dakika rahatlarsın, sonra sayaç sıfırlanır. Değmez."
+  ];
+  var MILE=[
+    [1,"24 saat: karbonmonoksit temizlendi"],
+    [2,"48 saat: tat ve koku dönüyor"],
+    [3,"3 gün: nikotin vücuttan çıktı"],
+    [14,"2 hafta: dolaşım belirgin düzeldi"],
+    [30,"1 ay: akciğer kapasitesi artıyor"],
+    [90,"3 ay: nefes darlığı azaldı"],
+    [365,"1 yıl: kalp riski yarıya indi"]
+  ];
+  var CIGS=20, DAYS=21;
+
+  var state={days:{},v:1}, db=null, saveT=null;
+
+  function key(d){return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");}
+  function today(){return key(new Date());}
+  function day(k){ if(!state.days[k]) state.days[k]={s:0,a:0,m:{},u:0}; return state.days[k]; }
+
+  /* ---------- storage ---------- */
+  function local(write){
+    try{
+      if(write) localStorage.setItem("ritim",JSON.stringify(state));
+      else{var r=localStorage.getItem("ritim"); if(r) state=JSON.parse(r);}
+    }catch(e){}
+  }
+  function save(){
+    local(true);
+    nativeBackup();
+    if(!db) return;
+    clearTimeout(saveT);
+    saveT=setTimeout(function(){
+      db.doc("tracker/state").set(JSON.parse(JSON.stringify(state))).catch(function(){});
+    },600);
+  }
+  async function boot(){
+    local(false);
+    if(!N && migrateMarks(V1_SLOTS)) local(true);
+    render();
+    await nativeBoot();
+    try{
+      var d=await claude.use("db");
+      if(!d) return;
+      db=d;
+      var snap=await db.doc("tracker/state").get();
+      if(snap && snap.exists && snap.data && snap.data.days){
+        var remote=snap.data;
+        for(var k in remote.days){
+          var r=remote.days[k], l=state.days[k];
+          if(!l){ state.days[k]=r; continue; }
+          l.s=Math.max(l.s|0,r.s|0); l.a=Math.max(l.a|0,r.a|0); l.u=Math.max(l.u|0,r.u|0);
+          l.m=Object.assign({},r.m||{},l.m||{});
+        }
+        render(); local(true);
+      }
+      save();
+    }catch(e){}
+  }
+
+  /* ---------- derived ---------- */
+  function streak(f){
+    var n=0,d=new Date();
+    if(!f(day(today()))) d.setDate(d.getDate()-1);
+    for(var i=0;i<400;i++){
+      var e=state.days[key(d)];
+      if(e&&f(e)){n++; d.setDate(d.getDate()-1);} else break;
+    }
+    return n;
+  }
+  function lastDays(n){
+    var out=[],d=new Date();
+    d.setDate(d.getDate()-(n-1));
+    for(var i=0;i<n;i++){out.push(key(d)); d.setDate(d.getDate()+1);}
+    return out;
+  }
+
+  /* ---------- render ---------- */
+  var TR=["Pazar","Pazartesi","Salı","Çarşamba","Perşembe","Cuma","Cumartesi"];
+  var AY=["Ocak","Şubat","Mart","Nisan","Mayıs","Haziran","Temmuz","Ağustos","Eylül","Ekim","Kasım","Aralık"];
+
+  function marks(el,f){
+    var ks=lastDays(DAYS), t=today(), h="";
+    for(var i=0;i<ks.length;i++){
+      var e=state.days[ks[i]];
+      h+='<span class="mk'+(e&&f(e)?" on":"")+(ks[i]===t?" today":"")+'"></span>';
+    }
+    el.innerHTML=h;
+  }
+  function q(id){return document.getElementById(id);}
+  function esc(s){
+    return String(s==null?"":s).replace(/[&<>"']/g,function(c){
+      return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];
+    });
+  }
+
+  function render(){
+    var now=new Date(), t=today(), d=day(t);
+    q("today").textContent=TR[now.getDay()]+", "+now.getDate()+" "+AY[now.getMonth()];
+
+    marks(q("s-marks"),function(e){return e.s;});
+    marks(q("a-marks"),function(e){return e.a;});
+    var ss=streak(function(e){return e.s;}), as=streak(function(e){return e.a;});
+    q("s-streak").textContent=ss?ss+" gün":"başlamadı";
+    q("a-streak").textContent=as?as+" gün":"başlamadı";
+
+    q("t-smoke").setAttribute("aria-pressed",d.s?"true":"false");
+    q("t-alc").setAttribute("aria-pressed",d.a?"true":"false");
+
+    var mh="";
+    for(var i=0;i<SLOTS.length;i++){
+      var m=SLOTS[i], on=d.m&&d.m[m.time];
+      mh+='<button class="row" data-slot="'+m.time+'" aria-pressed="'+(on?"true":"false")+'">'+
+          '<span class="box"></span><span class="txt"><b>'+esc(m.label)+'</b>'+(m.notes?'<small>'+esc(m.notes)+'</small>':'')+'</span>'+
+          '<span class="clock">'+m.time+'</span></button>';
+    }
+    q("meds").innerHTML=mh||'<p class="empty">İlaç eklemek için ayarlar\'a dokun.</p>';
+
+    var dh="";
+    DOCTORS.forEach(function(doc){
+      var tel=String(doc.phone||"").replace(/[^\d+]/g,"");
+      dh+='<div class="doc"><span class="txt"><b>'+esc(doc.name)+'</b>'+
+          (doc.specialty?'<small>'+esc(doc.specialty)+'</small>':'')+
+          (doc.note?'<small>'+esc(doc.note)+'</small>':'')+'</span>'+
+          (tel?'<a class="mini" href="tel:'+tel+'">Ara</a>':'')+'</div>';
+    });
+    q("docs").innerHTML=dh; q("docs-sec").hidden=!dh;
+
+    var u=0,clean=0,mk=t.slice(0,8);
+    for(var k in state.days){
+      u+=state.days[k].u|0;
+      if(k.indexOf(mk)===0 && state.days[k].s) clean++;
+    }
+    q("f-urges").textContent=u;
+    q("f-clean").textContent=clean;
+    q("f-cigs").textContent=(ss*CIGS).toLocaleString("tr-TR");
+    var nx=null;
+    for(var j=0;j<MILE.length;j++){ if(MILE[j][0]>ss){nx=MILE[j];break;} }
+    q("f-next").textContent=nx?nx[1]:"1 yılı geçtin";
+    if(typeof renderTabs==="function") renderTabs();
+  }
+
+  /* ---------- events ---------- */
+  q("t-smoke").onclick=function(){var d=day(today()); d.s=d.s?0:1; save(); render();};
+  q("t-alc").onclick=function(){var d=day(today()); d.a=d.a?0:1; save(); render();};
+  q("meds").onclick=function(ev){
+    var b=ev.target.closest("[data-slot]"); if(!b) return;
+    var d=day(today()); d.m=d.m||{}; var t=b.getAttribute("data-slot");
+    d.m[t]=d.m[t]?0:1; save(); render();
+    if(N) N.setDose({date:today(),slot:t,taken:!!d.m[t]}).catch(function(){});
+  };
+
+  /* ---------- urge timer ---------- */
+  var tick=null,cueT=null,lineT=null,left=240;
+  function fmt(s){return Math.floor(s/60)+":"+String(s%60).padStart(2,"0");}
+  function newLine(){ q("line").textContent=LINES[Math.floor(Math.random()*LINES.length)]; }
+  function openOv(){
+    left=240; q("cd").textContent="4:00"; newLine();
+    q("ov").classList.add("show");
+    tick=setInterval(function(){
+      left--; q("cd").textContent=fmt(Math.max(left,0));
+      if(left<=0){ q("cd").textContent="geçti"; q("line").textContent="Dalga indi. Sayaç duruyor."; clearInterval(tick); tick=null; }
+    },1000);
+    lineT=setInterval(newLine,32000);
+    var inhale=true;
+    cueT=setInterval(function(){ inhale=!inhale; q("cue").textContent=inhale?"nefes al":"yavaşça ver"; },5000);
+  }
+  function closeOv(){
+    clearInterval(tick); clearInterval(cueT); clearInterval(lineT);
+    q("ov").classList.remove("show");
+    var d=day(today()); d.u=(d.u|0)+1; save(); render();
+  }
+  q("urge-btn").onclick=openOv;
+  q("ov-close").onclick=closeOv;
+  document.addEventListener("keydown",function(e){ if(e.key==="Escape"&&q("ov").classList.contains("show")) closeOv(); });
+
+  /* ---------- native (Android) ----------
+     Capacitor exposes our RitimPlugin as Capacitor.Plugins.Ritim. In a plain
+     browser N is null and everything below is inert. The native store is the
+     source of truth for medications, doctors and dose marks ("Aldım" works with
+     the app closed); dose marks are keyed by slot time ("08:00"). */
+  var C=window.Capacitor;
+  var N=(C&&C.isNativePlatform&&C.isNativePlatform()&&C.Plugins&&C.Plugins.Ritim)||null;
+  var nat=null, backupT=null, testAt=0, resumeWaiters=[], editing=null, ignorePop=0;
+  var TIME=/^\d{2}:\d{2}$/;
+  if(N) document.documentElement.classList.add("native");
+
+  function pad(n){ return String(n).padStart(2,"0"); }
+  function hhmm(ms){ var d=new Date(ms); return pad(d.getHours())+":"+pad(d.getMinutes()); }
+  function hhmmss(ms){ return hhmm(ms)+":"+pad(new Date(ms).getSeconds()); }
+  function when(ms){
+    if(!ms) return "—";
+    var d=new Date(ms), k=key(d), t=new Date(), tm=new Date(); tm.setDate(tm.getDate()+1);
+    if(k===key(t)) return "bugün "+hhmm(ms);
+    if(k===key(tm)) return "yarın "+hhmm(ms);
+    return ["Paz","Pzt","Sal","Çar","Per","Cum","Cmt"][d.getDay()]+" "+hhmm(ms);
+  }
+
+  function nativeBackup(){
+    if(!N) return;
+    clearTimeout(backupT);
+    backupT=setTimeout(function(){ N.backup({json:JSON.stringify(state)}).catch(function(){}); },600);
+  }
+
+  // v1 kept dose marks under m1/m2/m3; v2 keys them by slot time.
+  function migrateMarks(map){
+    var changed=false;
+    for(var k in state.days){
+      var m=state.days[k].m; if(!m) continue;
+      ["m1","m2","m3"].forEach(function(old){
+        if(!(old in m)) return;
+        var t=map[old]; if(t && m[old]) m[t]=1;
+        delete m[old]; changed=true;
+      });
+    }
+    return changed;
+  }
+
+  function applyNative(st,first,hadLocal){
+    nat=st;
+    if(first && !hadLocal && st.backup){
+      try{ var b=JSON.parse(st.backup); if(b&&b.days) state=b; }catch(e){}
+    }
+    SLOTS=st.slots.map(function(s){ return {time:s.time,label:s.label,notes:s.notes}; });
+    DOCTORS=st.doctors||[];
+    if(first) migrateMarks(st.legacyMap||{});
+    var doses=st.doses||{};
+    for(var k in doses){
+      for(var t in doses[k]){
+        if(!TIME.test(t)) continue;
+        var d=day(k); d.m=d.m||{}; d.m[t]=doses[k][t]?1:0;
+      }
+    }
+    if(first){ // hand over marks the native store has never seen
+      for(var k2 in state.days){
+        var mm=state.days[k2].m||{};
+        for(var t2 in mm){
+          if(mm[t2] && TIME.test(t2) && !(doses[k2] && t2 in doses[k2]))
+            N.setDose({date:k2,slot:t2,taken:true}).catch(function(){});
+        }
+      }
+    }
+    local(true); nativeBackup(); render(); renderWarn(); renderHealth(); renderTabs();
+    if(q("sheet").classList.contains("show")) renderSheet();
+    if(cardOpen()) renderCard();
+  }
+
+  function refresh(){
+    if(!N) return Promise.resolve();
+    return N.getState().then(function(st){ applyNative(st,false); }).catch(function(){});
+  }
+
+  function onResume(){
+    refresh(); refreshDocs(); refreshHealth();
+    var w=resumeWaiters; resumeWaiters=[];
+    w.forEach(function(f){ f(); });
+  }
+  function waitResume(){
+    return new Promise(function(res){
+      resumeWaiters.push(res);
+      setTimeout(res,300000); // never hang onboarding
+    });
+  }
+
+  async function nativeBoot(){
+    if(!N) return;
+    var had=true;
+    try{ had=localStorage.getItem("ritim")!==null; }catch(e){}
+    try{
+      N.addListener("doseChanged",function(e){
+        if(TIME.test(e.slot)){ var d=day(e.date); d.m=d.m||{}; d.m[e.slot]=e.taken?1:0; save(); render(); }
+        refresh();
+      });
+      N.addListener("resume",onResume);
+      N.addListener("openCard",function(){ N.consumeLaunch().catch(function(){}); switchTab("kartim"); });
+      N.addListener("openPrivacy",function(){ N.consumeLaunch().catch(function(){}); openPrivacy(); });
+      N.addListener("openTab",function(e){ N.consumeLaunch().catch(function(){}); switchTab(e.tab); });
+      N.addListener("documentsChanged",refreshDocs);
+      N.addListener("importProgress",function(e){
+        if(e.total>1||e.done<e.total){ q("import-text").textContent="Kopyalanıyor "+Math.min(e.done+1,e.total)+" / "+e.total; q("import-ov").classList.add("show"); }
+      });
+      refreshDocs();
+      var st=await N.getState();
+      applyNative(st,true,had);
+      refreshHealth();
+      N.consumeLaunch().then(function(r){ if(r.action==="card") switchTab("kartim"); else if(r.action==="privacy") openPrivacy(); else if(String(r.action).indexOf("tab:")===0) switchTab(r.action.slice(4)); }).catch(function(){});
+      if(!st.onboarded) onboard();
+    }catch(e){}
+  }
+
+  // First launch: walk through every permission Android needs for reliable delivery.
+  async function onboard(){
+    try{
+      var st=await N.requestNotifications(); applyNative(st,false);
+      if(!st.status.exactAlarms){ await N.openSettings({target:"exact"}); await waitResume(); st=await N.getState(); applyNative(st,false); }
+      if(!st.status.batteryUnrestricted){ await N.openSettings({target:"battery"}); await waitResume(); }
+      await N.markOnboarded();
+      refresh();
+    }catch(e){}
+  }
+
+  /* ---- persistent warning ---- */
+  var ISSUES=[
+    {bad:function(s){return s.notifications!=="granted"||!s.notificationsEnabled;}, t:"Bildirim izni kapalı — ilaç hatırlatmaları gelmeyecek.", b:"Aç", fix:function(){
+      N.requestNotifications().then(function(st){
+        applyNative(st,false);
+        if(st.status.notifications!=="granted"||!st.status.notificationsEnabled) N.openSettings({target:"notifications"});
+      });
+    }},
+    {bad:function(s){return s.notificationsEnabled&&!s.medsChannel;}, t:"İlaç bildirimleri sessize alınmış.", b:"Aç", fix:function(){ N.openSettings({target:"channel"}); }},
+    {bad:function(s){return !s.exactAlarms;}, t:"Kesin alarm izni yok — dozlar gecikebilir.", b:"İzin ver", fix:function(){ N.openSettings({target:"exact"}); }},
+    {bad:function(s){return !s.batteryUnrestricted;}, t:"Pil optimizasyonu açık — telefon bildirimleri geciktirebilir.", b:"Muaf tut", fix:function(){ N.openSettings({target:"battery"}); }},
+    {bad:function(s){return s.medsUnreadable;}, t:"İlaç listesi okunamadı — ayarlardan kontrol et.", b:"Aç", fix:function(){ openSheet(false); }},
+    {bad:function(s){return s.healthUnreadable;}, t:"Sağlık kartı ya da randevular okunamadı — ayarlardan kontrol et.", b:"Aç", fix:function(){ openSheet(false); }}
+  ];
+  function renderWarn(){
+    var w=q("warn"), s=nat&&nat.status, h="";
+    if(s) ISSUES.forEach(function(it,i){
+      if(it.bad(s)) h+='<p><span>'+it.t+'</span><button class="mini" data-fix="'+i+'">'+it.b+'</button></p>';
+    });
+    w.innerHTML=h; w.hidden=!h;
+  }
+  function onFix(ev){
+    var b=ev.target.closest("[data-fix]"); if(b){ ISSUES[+b.getAttribute("data-fix")].fix(); return; }
+    var o=ev.target.closest("[data-open]"); if(o) N.openSettings({target:o.getAttribute("data-open")});
+  }
+  q("warn").onclick=onFix;
+
+  /* ---- settings sheet ---- */
+  function renderLists(){
+    var mh="";
+    nat.meds.forEach(function(m){
+      mh+='<button class="row" data-edit-med="'+esc(m.id)+'"><span class="txt"><b>'+esc(m.name)+(m.dose?" "+esc(m.dose):"")+'</b>'+
+          '<small>'+esc(m.times.join(", "))+(m.note?" · "+esc(m.note):"")+'</small></span><span class="clock">düzenle</span></button>';
+    });
+    q("set-meds").innerHTML=mh||'<p class="empty">Henüz ilaç yok.</p>';
+    var dh="";
+    nat.doctors.forEach(function(d){
+      dh+='<button class="row" data-edit-doc="'+esc(d.id)+'"><span class="txt"><b>'+esc(d.name)+'</b>'+
+          '<small>'+esc([d.specialty,d.phone].filter(Boolean).join(" · ")||"—")+'</small></span><span class="clock">düzenle</span></button>';
+    });
+    q("set-docs").innerHTML=dh||'<p class="empty">Henüz doktor yok.</p>';
+
+    var now=Date.now(), ah="";
+    (nat.appointments||[]).slice().sort(function(x,y){
+      var fx=x.at>now, fy=y.at>now;
+      return fx!==fy?(fx?-1:1):(fx?x.at-y.at:y.at-x.at);
+    }).forEach(function(a){
+      ah+='<button class="row'+(a.at>now?"":" dim")+'" data-edit-appt="'+esc(a.id)+'"><span class="txt"><b>'+esc(apptWhen(a))+'</b>'+
+          '<small>'+esc([a.doctorName,a.place].filter(Boolean).join(" · ")||"—")+'</small></span><span class="clock">düzenle</span></button>';
+    });
+    q("set-appts").innerHTML=ah||'<p class="empty">Henüz randevu yok.</p>';
+
+    var h=nat.health, p=h.profile, pr=h.procedure, hh="";
+    if(filled(p)) hh+='<button class="row" data-edit-single="profile"><span class="txt"><b>Kişisel ve acil bilgiler</b><small>'+
+      esc([p.name,p.bloodType,p.emergencyName].filter(Boolean).join(" · ")||"dolu")+'</small></span><span class="clock">düzenle</span></button>';
+    if(filled(pr)) hh+='<button class="row" data-edit-single="procedure"><span class="txt"><b>İşlem bilgisi</b><small>'+
+      esc([fmtDate(pr.date),pr.hospital].filter(Boolean).join(" · ")||"dolu")+'</small></span><span class="clock">düzenle</span></button>';
+    h.stents.forEach(function(x){
+      hh+='<button class="row" data-edit-stent="'+esc(x.id)+'"><span class="txt"><b>'+esc([x.vessel,x.segment].filter(Boolean).join(" — "))+'</b>'+
+          '<small>'+esc([stentSize(x),x.code].filter(Boolean).join(" · ")||"—")+'</small></span><span class="clock">düzenle</span></button>';
+    });
+    (h.notes||[]).forEach(function(n){
+      hh+='<button class="row" data-edit-note="'+esc(n.id)+'"><span class="txt"><b>'+esc(n.title)+'</b>'+
+          '<small>'+esc(n.text.split("\n")[0])+'</small></span><span class="clock">düzenle</span></button>';
+    });
+    q("card-menu").hidden=true;
+    q("card-menu").querySelector('[data-card="profile"]').textContent="Kişisel ve acil bilgiler"+(filled(p)?" (dolu)":"");
+    q("card-menu").querySelector('[data-card="procedure"]').textContent="İşlem bilgisi"+(filled(pr)?" (dolu)":"");
+    q("set-health-rows").innerHTML=hh;
+  }
+  function renderTimes(){
+    var h="";
+    nat.reminders.forEach(function(r){
+      h+='<label class="set"><span class="txt"><b>'+esc(r.title)+'</b><small>'+(r.weekdaysOnly?"hafta içi":"her gün")+'</small></span>'+
+         '<input type="time" data-id="'+r.id+'" value="'+r.time+'" aria-label="'+esc(r.title)+' saati"></label>';
+    });
+    q("set-times").innerHTML=h;
+  }
+  function renderSheet(){
+    renderLists();
+    var s=nat.status, rows=[
+      ["Bildirim izni", s.notifications==="granted"&&s.notificationsEnabled, 0],
+      ["İlaç kanalı sesli", s.medsChannel, 1],
+      ["Kesin alarm", s.exactAlarms, 2],
+      ["Pil optimizasyonundan muaf", s.batteryUnrestricted, 3]
+    ], h="";
+    rows.forEach(function(r){
+      h+='<div class="chk"><span>'+r[0]+'</span>'+(r[1]?'<b class="ok">✓</b>':'<button class="mini" data-fix="'+r[2]+'">Düzelt</button>')+'</div>';
+    });
+    h+='<div class="chk"><span>Otomatik başlatma / arka plan<small style="display:block;color:var(--mute)">Xiaomi, Samsung, Oppo… cihazlarda ayrıca aç</small></span>'+
+       '<button class="mini ok" data-open="autostart">Aç</button></div>';
+    q("set-status").innerHTML=h;
+    renderHc();
+    renderBpTimes();
+
+    q("set-files-info").textContent=docs?docs.docs.length+" dosya · "+fmtSize(docs.totalBytes):"—";
+    // The install time shows at a glance whether an update reached the phone.
+    q("set-version").textContent=nat.version?"Sürüm "+nat.version+(nat.updatedAt?" · güncellendi "+fmtDate(key(new Date(nat.updatedAt)))+" "+hhmm(nat.updatedAt):""):"";
+    var list=[], now=Date.now();
+    nat.slots.forEach(function(sl){
+      list.push({t:"İlaç · "+sl.label,at:sl.next,exact:sl.nextExact});
+      if(sl.followUpAt>now) list.push({t:"Tekrar · "+sl.label,at:sl.followUpAt,exact:sl.nextExact});
+    });
+    nat.reminders.forEach(function(r){ list.push({t:r.title,at:r.next,exact:r.nextExact}); });
+    (nat.appointments||[]).forEach(function(a){
+      if(a.nextReminderAt>now) list.push({t:"Randevu hatırlatması · "+apptWhen(a),at:a.nextReminderAt,exact:s.exactAlarms});
+    });
+    if(hc&&hc.walkCheckAt>now) list.push({t:"Öğle yürüyüşü kontrolü",at:hc.walkCheckAt,exact:s.exactAlarms});
+    (nat.bp&&nat.bp.next||[]).forEach(function(x){ list.push({t:"Tansiyon ölçümü · "+x.time,at:x.at,exact:x.exact}); });
+    list.sort(function(a,b){return a.at-b.at;});
+    q("set-next").innerHTML=list.map(function(x){
+      return '<div class="chk"><span>'+esc(x.t)+'</span><span>'+when(x.at)+(x.exact?"":' <small class="bad">yaklaşık</small>')+'</span></div>';
+    }).join("");
+
+    if(s.testAckAt && s.testAckAt>testAt && Date.now()-s.testAckAt<3600000){
+      q("test-msg").textContent="✓ Test dozu "+hhmmss(s.testAckAt)+" — bildirimdeki Aldım ile, uygulama açılmadan işaretlendi.";
+    }
+  }
+  // replace=true reuses the current history entry (used when the card hands over to settings).
+  function openSheet(replace){
+    if(!nat) return;
+    renderTimes(); renderSheet(); q("set-msg").textContent="";
+    q("sheet").classList.add("show"); q("sheet").scrollTop=0;
+    try{ if(replace) history.replaceState({sheet:1},""); else history.pushState({sheet:1},""); }catch(e){}
+    refresh(); refreshHealth();
+  }
+  function closeSheet(fromHistory){
+    if(!q("sheet").classList.contains("show")) return;
+    q("sheet").classList.remove("show");
+    if(!fromHistory){ ignorePop++; try{ history.back(); }catch(e){ ignorePop--; } }
+  }
+  function formOpen(){ return q("form").classList.contains("show"); }
+  // Each sheet is one history entry, so hardware back closes the top-most one.
+  // Closes the top-most layer; false when only the main screen is showing.
+  function closeTop(fromHistory){
+    if(formOpen()) closeForm(fromHistory); else if(viewerOpen()) closeViewer(fromHistory); else if(isUp("day")) popSheet("day",fromHistory);
+    else if(isUp("bp-report")) popSheet("bp-report",fromHistory); else if(isUp("privacy")) popSheet("privacy",fromHistory);
+    else if(isUp("quit")) popSheet("quit",fromHistory); else if(isUp("people")) popSheet("people",fromHistory);
+    else if(isUp("metrics")) popSheet("metrics",fromHistory); else if(filesOpen()) closeFiles(fromHistory);
+    else if(cardOpen()) closeCard(fromHistory); else if(isUp("sheet")) closeSheet(fromHistory);
+    else if(curTab!=="bugun") switchTab("bugun");
+    else return false;
+    return true;
+  }
+  window.addEventListener("popstate",function(){
+    if(ignorePop){ ignorePop--; return; }
+    closeTop(true);
+  });
+  // Native back asks here when WebView has no back entry of its own: Chromium skips entries
+  // pushed without a user gesture (sheets opened from a launch intent), so close them directly.
+  window.ritimBack=function(){ return closeTop(true); };
+  document.addEventListener("keydown",function(e){
+    if(e.key!=="Escape") return;
+    closeTop(false);
+  });
+  q("set-open").onclick=function(){ openSheet(false); };
+  q("set-close").onclick=function(){ closeSheet(false); };
+  q("set-status").onclick=onFix;
+
+  q("set-save").onclick=function(){
+    var times={}, bad=false;
+    q("set-times").querySelectorAll("input").forEach(function(i){
+      var v=(i.value||"").slice(0,5);
+      if(!TIME.test(v)) bad=true;
+      times[i.getAttribute("data-id")]=v;
+    });
+    if(bad){ q("set-msg").textContent="Boş ya da geçersiz saat var."; return; }
+    N.setTimes({times:times}).then(function(st){
+      applyNative(st,false);
+      q("set-msg").textContent="Kaydedildi — bildirimler yeni saatlere göre yeniden planlandı.";
+    }).catch(function(e){ q("set-msg").textContent="Kaydedilemedi: "+((e&&e.message)||e); });
+  };
+
+  /* ---- forms: medication, doctor, appointment, stent, procedure, profile ---- */
+  var BLOOD=["","0 Rh+","0 Rh-","A Rh+","A Rh-","B Rh+","B Rh-","AB Rh+","AB Rh-"];
+  var OFF='autocomplete="off"';
+  function field(id,label,value,attrs){
+    return '<label class="field"><span>'+label+'</span><input id="'+id+'" value="'+esc(value)+'" '+(attrs||"")+'></label>';
+  }
+  function area(id,label,value,max){
+    return '<label class="field"><span>'+label+'</span><textarea id="'+id+'" rows="3" maxlength="'+max+'">'+esc(value)+'</textarea></label>';
+  }
+  function choice(id,label,opts,value){
+    return '<label class="field"><span>'+label+'</span><select id="'+id+'">'+opts.map(function(o){
+      return '<option value="'+esc(o[0])+'"'+(o[0]===value?" selected":"")+'>'+esc(o[1])+'</option>';
+    }).join("")+'</select></label>';
+  }
+  function timeRow(v){
+    return '<div class="trow"><input type="time" value="'+esc(v)+'" aria-label="Saat">'+
+           '<button class="mini" type="button" data-rm-time aria-label="Saati sil">✕</button></div>';
+  }
+  function val(id){ return q(id).value.trim(); }
+  function pick(it,k){ return it?it[k]:""; }
+
+  var FORMS={
+    med:{title:["İlaç ekle","İlacı düzenle"],
+      body:function(it){
+        var times=(it&&it.times.length)?it.times:["08:00"];
+        return field("f-name","Ad *",pick(it,"name"),'maxlength="60" '+OFF)+
+          field("f-dose","Doz",pick(it,"dose"),'maxlength="30" placeholder="örn. 40 mg" '+OFF)+
+          field("f-note","Not",pick(it,"note"),'maxlength="120" placeholder="örn. aç karna" '+OFF)+
+          '<div class="field"><span>Saatler *</span><div id="f-times">'+times.map(timeRow).join("")+'</div>'+
+          '<button class="ghost" type="button" id="f-add-time">+ saat ekle</button></div>';
+      },
+      data:function(){
+        var times=[];
+        q("f-times").querySelectorAll("input").forEach(function(i){ var x=(i.value||"").slice(0,5); if(x) times.push(x); });
+        return {name:val("f-name"),dose:val("f-dose"),note:val("f-note"),times:times};
+      },
+      check:function(d){
+        if(!d.name) return "İlaç adı boş olamaz.";
+        if(!d.times.length) return "En az bir saat gerekli.";
+        for(var i=0;i<d.times.length;i++) if(d.times.indexOf(d.times[i])!==i) return "Aynı saat iki kez girilmiş: "+d.times[i];
+        return "";
+      },
+      save:function(d){ return N.saveMed({med:d}); },
+      del:function(id){ return N.deleteMed({id:id}); }},
+    doc:{title:["Doktor ekle","Doktoru düzenle"],
+      body:function(it){
+        return field("f-name","Ad *",pick(it,"name"),'maxlength="60" '+OFF)+
+          field("f-spec","Branş",pick(it,"specialty"),'maxlength="60" '+OFF)+
+          field("f-phone","Telefon",pick(it,"phone"),'maxlength="30" type="tel" inputmode="tel" '+OFF)+
+          field("f-note","Not",pick(it,"note"),'maxlength="120" '+OFF);
+      },
+      data:function(){ return {name:val("f-name"),specialty:val("f-spec"),phone:val("f-phone"),note:val("f-note")}; },
+      check:function(d){ return d.name?"":"Doktor adı boş olamaz."; },
+      save:function(d){ return N.saveDoctor({doctor:d}); },
+      del:function(id){ return N.deleteDoctor({id:id}); }},
+    appt:{title:["Randevu ekle","Randevuyu düzenle"],
+      body:function(it){
+        var docs=[["","—"]].concat(nat.doctors.map(function(d){ return [d.id,d.name]; }));
+        var dflt=it?it.doctorId:(nat.doctors[0]?nat.doctors[0].id:"");
+        return field("f-date","Tarih *",pick(it,"date"),'type="date"')+
+          field("f-time","Saat *",pick(it,"time"),'type="time"')+
+          choice("f-doc","Doktor",docs,dflt)+
+          field("f-place","Yer",pick(it,"place"),'maxlength="120" placeholder="örn. hastane, kat" '+OFF)+
+          area("f-note","Not",pick(it,"note"),300);
+      },
+      data:function(){
+        return {date:val("f-date"),time:val("f-time").slice(0,5),doctorId:q("f-doc").value,place:val("f-place"),note:val("f-note")};
+      },
+      check:function(d){
+        if(!d.date) return "Randevu tarihi gerekli.";
+        if(!d.time) return "Randevu saati gerekli.";
+        return "";
+      },
+      save:function(d){ return N.saveAppointment({appointment:d}); },
+      del:function(id){ return N.deleteAppointment({id:id}); }},
+    stent:{title:["Stent ekle","Stenti düzenle"],
+      body:function(it){
+        return field("f-vessel","Damar *",pick(it,"vessel"),'maxlength="120" placeholder="örn. RCA" '+OFF)+
+          field("f-segment","Bölüm",pick(it,"segment"),'maxlength="120" placeholder="örn. proksimal" '+OFF)+
+          field("f-dia","Çap (mm)",pick(it,"diameter"),'maxlength="30" inputmode="decimal" '+OFF)+
+          field("f-len","Uzunluk (mm)",pick(it,"length"),'maxlength="30" inputmode="decimal" '+OFF)+
+          field("f-model","Model",pick(it,"model"),'maxlength="120" '+OFF)+
+          field("f-code","Ürün kodu",pick(it,"code"),'maxlength="30" '+OFF);
+      },
+      data:function(){
+        return {vessel:val("f-vessel"),segment:val("f-segment"),diameter:val("f-dia"),length:val("f-len"),model:val("f-model"),code:val("f-code")};
+      },
+      check:function(d){ return d.vessel?"":"Damar boş olamaz."; },
+      save:function(d){ return N.saveStent({stent:d}); },
+      del:function(id){ return N.deleteStent({id:id}); }},
+    procedure:{title:["İşlem bilgisi","İşlem bilgisi"],single:true,
+      body:function(it){
+        return field("f-date","Tarih",pick(it,"date"),'type="date"')+
+          field("f-hosp","Hastane",pick(it,"hospital"),'maxlength="120" '+OFF)+
+          field("f-pdoc","Doktor",pick(it,"doctor"),'maxlength="120" '+OFF)+
+          field("f-access","Giriş yeri",pick(it,"access"),'maxlength="120" '+OFF)+
+          area("f-summary","Sonuç",pick(it,"summary"),300);
+      },
+      data:function(){
+        return {date:val("f-date"),hospital:val("f-hosp"),doctor:val("f-pdoc"),access:val("f-access"),summary:val("f-summary")};
+      },
+      check:function(){ return ""; },
+      save:function(d){ return N.saveProcedure({procedure:d}); }},
+    profile:{title:["Kişisel ve acil bilgiler","Kişisel ve acil bilgiler"],single:true,
+      body:function(it){
+        return field("f-pname","Ad soyad",pick(it,"name"),'maxlength="120" '+OFF)+
+          field("f-birth","Doğum tarihi",pick(it,"birthDate"),'type="date"')+
+          choice("f-blood","Kan grubu",BLOOD.map(function(b){ return [b,b||"—"]; }),pick(it,"bloodType"))+
+          area("f-allergy","Alerjiler",pick(it,"allergies"),300)+
+          field("f-ename","Acil durumda aranacak kişi",pick(it,"emergencyName"),'maxlength="120" '+OFF)+
+          field("f-ephone","Acil kişinin telefonu",pick(it,"emergencyPhone"),'maxlength="30" type="tel" inputmode="tel" '+OFF)+
+          area("f-diag","Tanılar",pick(it,"diagnoses"),300)+
+          area("f-heart","Kalp fonksiyonu",pick(it,"heart"),300);
+      },
+      data:function(){
+        return {name:val("f-pname"),birthDate:val("f-birth"),bloodType:q("f-blood").value,allergies:val("f-allergy"),
+          emergencyName:val("f-ename"),emergencyPhone:val("f-ephone"),diagnoses:val("f-diag"),heart:val("f-heart")};
+      },
+      check:function(){ return ""; },
+      save:function(d){ return N.saveProfile({profile:d}); }},
+    note:{title:["Kart ekle — Diğer","Kartı düzenle"],
+      body:function(it){
+        return field("f-ntitle","Başlık *",pick(it,"title"),'maxlength="120" placeholder="örn. Aşılar" '+OFF)+
+          '<label class="field"><span>Metin *</span><textarea id="f-ntext" rows="8" maxlength="2000">'+esc(pick(it,"text"))+'</textarea></label>';
+      },
+      data:function(){ return {title:val("f-ntitle"),text:val("f-ntext")}; },
+      check:function(d){ if(!d.title) return "Başlık boş olamaz."; if(!d.text) return "Metin boş olamaz."; return ""; },
+      save:function(d){ return N.saveNote({note:d}); },
+      del:function(id){ return N.deleteNote({id:id}); }}
+    ,docmeta:{title:["Belge","Belge bilgisi"],
+      body:function(it){
+        var info=it?[it.kind==="video"?"Video":it.kind==="pdf"?"PDF":"Fotoğraf",fmtSize(it.size),
+          it.meta&&it.meta.frames?it.meta.frames+" kare":"",it.durationMs?fmtDur(it.durationMs):""].filter(Boolean).join(" · "):"";
+        return field("f-title","Başlık *",pick(it,"title"),'maxlength="120" '+OFF)+
+          choice("f-cat","Kategori",[["rapor","Raporlar"],["anjiyo","Anjiyo"],["diger","Tahliller"]],pick(it,"category")||"rapor")+
+          field("f-ddate","Tarih",pick(it,"date"),'type="date"')+
+          area("f-dnote","Not",pick(it,"note"),300)+
+          (info?'<p class="msg">'+esc(info)+'</p>':"")+
+          (it&&it.kind==="pdf"&&!it.missing?'<button class="btn" type="button" id="f-open-pdf">PDF\'i aç</button>':"");
+      },
+      data:function(){ return {title:val("f-title"),category:q("f-cat").value,date:val("f-ddate"),note:val("f-dnote")}; },
+      check:function(d){ return d.title?"":"Başlık boş olamaz."; },
+      save:function(d){ return N.updateDocument({doc:d}); },
+      del:function(id){ return N.deleteDocument({id:id}); },
+      after:function(st){
+        applyDocs(st);
+        var cur=viewerOpen()?vw.list[vw.i]:null;
+        if(cur&&!st.docs.some(function(x){ return x.id===cur.id; })) closeViewer(false);
+      }}
+  };
+
+  function openForm(kind,item){
+    var F=FORMS[kind];
+    editing={kind:kind,id:(item&&item.id)||null};
+    q("form-title").textContent=F.title[item?1:0];
+    q("form-body").innerHTML=F.body(item);
+    q("form-del").hidden=!item||!!F.single;
+    q("form-msg").textContent="";
+    q("form").classList.add("show"); q("form").scrollTop=0;
+    try{ history.pushState({form:1},""); }catch(e){}
+  }
+  function closeForm(fromHistory){
+    if(!formOpen()) return;
+    q("form").classList.remove("show"); editing=null;
+    if(!fromHistory){ ignorePop++; try{ history.back(); }catch(e){ ignorePop--; } }
+  }
+  q("form-body").onclick=function(ev){
+    if(ev.target.id==="f-open-pdf"){
+      N.openDocument({id:editing.id}).catch(function(e){ q("form-msg").textContent=(e&&e.message)||String(e); });
+      return;
+    }
+    if(ev.target.id==="f-add-time"){
+      q("f-times").insertAdjacentHTML("beforeend",timeRow(""));
+      var ins=q("f-times").querySelectorAll("input"); ins[ins.length-1].focus();
+      return;
+    }
+    var rm=ev.target.closest("[data-rm-time]"); if(rm) rm.parentNode.remove();
+  };
+  function formDone(p,after){
+    p.then(function(st){ (after||applyNative)(st,false); closeForm(false); })
+     .catch(function(e){ q("form-msg").textContent=(e&&e.message)||String(e); });
+  }
+  q("form-save").onclick=function(){
+    var F=FORMS[editing.kind], d=F.data(), err=F.check(d);
+    if(err){ q("form-msg").textContent=err; return; }
+    if(editing.id) d.id=editing.id;
+    formDone(F.save(d),F.after);
+  };
+  q("form-del").onclick=function(){
+    if(!editing||!editing.id) return;
+    var F=FORMS[editing.kind], d=F.data();
+    var appt=editing.kind==="appt"?findById(nat.appointments,editing.id):null;
+    var name=appt?apptWhen(appt)+" randevusu":(d.name||d.vessel||d.title||"Bu kayıt");
+    if(!confirm(name+" silinsin mi?")) return;
+    formDone(F.del(editing.id),F.after);
+  };
+  q("form-close").onclick=function(){ closeForm(false); };
+  q("med-add").onclick=function(){ openForm("med",null); };
+  q("doc-add").onclick=function(){ openForm("doc",null); };
+  q("appt-add").onclick=function(){ openForm("appt",null); };
+  q("card-add").onclick=function(){ q("card-menu").hidden=!q("card-menu").hidden; };
+  q("card-menu").onclick=function(ev){
+    var b=ev.target.closest("[data-card]"); if(!b) return;
+    var k=b.getAttribute("data-card");
+    q("card-menu").hidden=true;
+    // Singular cards always edit the one record; stents and "Diğer" add a new one.
+    openForm(k,k==="profile"||k==="procedure"?nat.health[k]:null);
+  };
+  function findById(list,id){ for(var i=0;i<list.length;i++) if(list[i].id===id) return list[i]; return null; }
+  q("set-meds").onclick=function(ev){
+    var b=ev.target.closest("[data-edit-med]"); if(b) openForm("med",findById(nat.meds,b.getAttribute("data-edit-med")));
+  };
+  q("set-docs").onclick=function(ev){
+    var b=ev.target.closest("[data-edit-doc]"); if(b) openForm("doc",findById(nat.doctors,b.getAttribute("data-edit-doc")));
+  };
+  q("set-appts").onclick=function(ev){
+    var b=ev.target.closest("[data-edit-appt]"); if(b) openForm("appt",findById(nat.appointments,b.getAttribute("data-edit-appt")));
+  };
+  q("set-health-rows").onclick=function(ev){
+    var s=ev.target.closest("[data-edit-stent]");
+    if(s){ openForm("stent",findById(nat.health.stents,s.getAttribute("data-edit-stent"))); return; }
+    var n=ev.target.closest("[data-edit-note]");
+    if(n){ openForm("note",findById(nat.health.notes||[],n.getAttribute("data-edit-note"))); return; }
+    var o=ev.target.closest("[data-edit-single]");
+    if(o){ var k=o.getAttribute("data-edit-single"); openForm(k,nat.health[k]); }
+  };
+
+  /* ---- health card & appointments ---- */
+  var DAY3=["Paz","Pzt","Sal","Çar","Per","Cum","Cmt"];
+  function filled(o){ for(var k in o) if(o[k]) return true; return false; }
+  function fmtDate(s){ return s?s.slice(8,10)+"."+s.slice(5,7)+"."+s.slice(0,4):""; }
+  function apptWhen(a){ var d=new Date(a.at); return d.getDate()+" "+AY[d.getMonth()].slice(0,3)+" "+DAY3[d.getDay()]+" "+a.time; }
+  function upcoming(){
+    var now=Date.now();
+    return (nat.appointments||[]).filter(function(a){ return a.at>now; }).sort(function(x,y){ return x.at-y.at; });
+  }
+  function telOf(s){ return String(s||"").replace(/[^\d+]/g,""); }
+  function stentSize(x){
+    if(x.diameter&&x.length) return x.diameter+" × "+x.length+" mm";
+    return x.diameter||x.length?(x.diameter||x.length)+" mm":"";
+  }
+  function kv(label,value){ return value?'<div class="kv"><span>'+esc(label)+'</span><b>'+esc(value)+'</b></div>':""; }
+  function sec(title,body){ return body?'<section class="card-sec"><h2>'+title+'</h2>'+body+'</section>':""; }
+
+  function renderHealth(){
+    if(!nat) return;
+    var next=upcoming()[0];
+    q("appt-next").classList.toggle("dim",!next);
+    q("appt-title").textContent=next?"Sıradaki kontrol · "+apptWhen(next):"Kontrol randevusu girilmedi — ekle";
+    q("appt-sub").textContent=next?[next.doctorName,next.place].filter(Boolean).join(" · "):"";
+    var h=nat.health, p=h.profile, parts=[];
+    if(h.stents.length) parts.push(h.stents.length+" stent");
+    if(p.diagnoses) parts.push("tanılar");
+    if(p.bloodType||p.allergies||p.emergencyPhone) parts.push("acil bilgiler");
+    if((h.notes||[]).length) parts.push("notlar");
+    q("card-sub").textContent=parts.join(" · ")||"henüz doldurulmadı";
+  }
+  q("appt-next").onclick=function(){ openForm("appt",upcoming()[0]||null); };
+
+  function renderCard(){
+    var h=nat.health, p=h.profile, pr=h.procedure, out="";
+    if(p.name||p.birthDate) out+='<p class="card-id"><b>'+esc(p.name)+'</b>'+(p.birthDate?(p.name?" · ":"")+fmtDate(p.birthDate):"")+'</p>';
+    var tel=telOf(p.emergencyPhone);
+    var who=p.emergencyName||p.emergencyPhone?'<div class="kv"><span>Acil kişi</span><b>'+esc(p.emergencyName||p.emergencyPhone)+
+      (tel?' <a class="mini" href="tel:'+tel+'">Ara</a>':"")+'</b></div>':"";
+    out+=sec("Acil",kv("Kan grubu",p.bloodType)+kv("Alerjiler",p.allergies)+who);
+    var st="";
+    if(h.stents.length||pr.date||pr.hospital){
+      st='<p class="card-lead">'+esc([h.stents.length?h.stents.length+" koroner stent":"",fmtDate(pr.date),pr.hospital].filter(Boolean).join(" · "))+'</p>';
+      h.stents.forEach(function(x){
+        st+='<div class="stent"><b>'+esc([x.vessel,x.segment].filter(Boolean).join(" — "))+'</b>'+
+            '<small>'+esc([stentSize(x),x.model,x.code].filter(Boolean).join(" · "))+'</small></div>';
+      });
+    }
+    out+=sec("Stentler",st+kv("Sonuç",pr.summary)+kv("Doktor",pr.doctor)+kv("Giriş yeri",pr.access));
+    out+=sec("Tanılar",p.diagnoses?'<p class="card-text">'+esc(p.diagnoses)+'</p>':"");
+    out+=sec("Kalp fonksiyonu",p.heart?'<p class="card-text">'+esc(p.heart)+'</p>':"");
+    var lb=lastOf(bpReadings());
+    if(lb) out+=sec("Son tansiyon",kv(fmtDate(key(new Date(lb.time)))+" "+hhmm(lb.time),lb.sys+"/"+lb.dia+" mmHg"));
+    (h.notes||[]).forEach(function(n){ out+=sec(esc(n.title),'<p class="card-text">'+esc(n.text)+'</p>'); });
+    out+=sec("Kullandığı ilaçlar",nat.meds.map(function(m){ return kv(m.name+(m.dose?" "+m.dose:""),m.times.join(", ")); }).join(""));
+    out+=sec("Doktorlar",nat.doctors.map(function(d){
+      var t=telOf(d.phone);
+      return '<div class="kv"><span>'+esc(d.specialty||"Doktor")+'</span><b>'+esc(d.name)+(t?' <a class="mini" href="tel:'+t+'">Ara</a>':"")+'</b></div>';
+    }).join(""));
+    if(docs){
+      var cnt=docCounts();
+      out+=sec("Belgeler",FILE_CATS.filter(function(c){ return cnt[c[0]]; }).map(function(c){
+        return '<button class="row" data-files-tab="'+c[0]+'"><span class="txt"><b>'+c[2]+'</b></span><span class="clock">'+cnt[c[0]]+'</span></button>';
+      }).join(""));
+    }
+    q("card-body").innerHTML=out||'<p class="empty">Sağlık kartı henüz doldurulmadı.</p>';
+  }
+  q("card-body").onclick=function(ev){
+    var b=ev.target.closest("[data-files-tab]"); if(b) openFiles(b.getAttribute("data-files-tab"));
+  };
+  function cardOpen(){ return q("card").classList.contains("show"); }
+  function openCard(){
+    if(!nat||cardOpen()) return;
+    renderCard(); q("card").classList.add("show"); q("card").scrollTop=0;
+    try{ history.pushState({card:1},""); }catch(e){}
+  }
+  function closeCard(fromHistory){
+    if(!cardOpen()) return;
+    q("card").classList.remove("show");
+    if(!fromHistory){ ignorePop++; try{ history.back(); }catch(e){ ignorePop--; } }
+  }
+  q("card-open").onclick=openCard;
+  q("card-close").onclick=function(){ closeCard(false); };
+  /* ---- documents ---- */
+  var docs=null, filesTab="rapor", vw={list:[],i:0};
+  var FILE_CATS=[["rapor","Raporlar","Raporlar"],["anjiyo","Anjiyo","Anjiyo videoları"],["diger","Tahliller","Tahliller"]];
+  function fmtSize(b){
+    b=b||0;
+    if(b<1048576) return Math.max(1,Math.round(b/1024))+" KB";
+    return (b/1048576).toFixed(b<10485760?1:0).replace(".",",")+" MB";
+  }
+  function fmtDur(ms){ var s=Math.round(ms/1000); return s<60?s+" sn":Math.floor(s/60)+":"+pad(s%60); }
+  function docsIn(cat){ return docs?docs.docs.filter(function(d){ return d.category===cat; }):[]; }
+  function docCounts(){ var c={rapor:0,anjiyo:0,diger:0}; (docs?docs.docs:[]).forEach(function(d){ c[d.category]=(c[d.category]||0)+1; }); return c; }
+  function refreshDocs(){ if(N) N.getDocuments().then(applyDocs).catch(function(){}); }
+  function applyDocs(st){
+    docs=st;
+    var c=docCounts(), parts=[];
+    if(c.rapor) parts.push(c.rapor+" rapor");
+    if(c.anjiyo) parts.push(c.anjiyo+" anjiyo");
+    if(c.diger) parts.push(c.diger+" tahlil");
+    q("files-sub").textContent=parts.join(" · ")||(st.seedPending?"raporlar hazırlanıyor…":"henüz belge yok — ekle");
+    if(filesOpen()) renderFiles();
+    if(cardOpen()) renderCard();
+    if(q("sheet").classList.contains("show")) q("set-files-info").textContent=st.docs.length+" dosya · "+fmtSize(st.totalBytes);
+    if(viewerOpen()){
+      var cur=vw.list[vw.i], nd=cur&&st.docs.filter(function(x){ return x.id===cur.id; })[0];
+      if(nd){ vw.list[vw.i]=nd; q("viewer-title").textContent=nd.title; }
+    }
+  }
+
+  function filesOpen(){ return q("files-sheet").classList.contains("show"); }
+  function openFiles(tab){
+    if(!docs) return;
+    if(tab) filesTab=tab;
+    q("files-menu").hidden=true; q("files-msg").textContent="";
+    renderFiles();
+    q("files-sheet").classList.add("show"); q("files-sheet").scrollTop=0;
+    try{ history.pushState({files:1},""); }catch(e){}
+  }
+  function closeFiles(fromHistory){
+    if(!filesOpen()) return;
+    q("files-sheet").classList.remove("show");
+    if(!fromHistory){ ignorePop++; try{ history.back(); }catch(e){ ignorePop--; } }
+  }
+  function renderFiles(){
+    q("files-tabs").innerHTML=FILE_CATS.map(function(c){
+      return '<button class="tab" role="tab" data-tab="'+c[0]+'" aria-selected="'+(c[0]===filesTab)+'">'+c[1]+' ('+docsIn(c[0]).length+')</button>';
+    }).join("");
+    var list=docsIn(filesTab);
+    q("files-grid").innerHTML=list.map(function(d,i){
+      var inner=d.missing?'<span class="glyph">?</span>':d.kind==="pdf"?'<span class="glyph">PDF</span>':
+        (d.thumbUrl?'<img src="'+d.thumbUrl+'" alt="" loading="lazy">':'<span class="glyph">'+(d.kind==="video"?"▶":"□")+'</span>');
+      var m=d.meta||{};
+      var cap=m.series?"Seri "+m.series+(m.angle?" · "+m.angle:"")+(m.time?" · "+m.time:""):d.title;
+      return '<button class="tile'+(d.missing?" missing":"")+'" data-i="'+i+'" aria-label="'+esc(d.title)+'">'+inner+
+        (d.kind==="video"&&d.durationMs?'<span class="dur">'+fmtDur(d.durationMs)+'</span>':"")+
+        '<span class="cap">'+esc(d.missing?"dosya bulunamadı":cap)+'</span></button>';
+    }).join("");
+    if(!list.length&&!q("files-msg").textContent) q("files-msg").textContent="Bu bölümde belge yok.";
+  }
+  q("files-open").onclick=function(){ openFiles(null); };
+  q("set-files-open").onclick=function(){ openFiles(null); };
+  q("files-close").onclick=function(){ closeFiles(false); };
+  q("files-tabs").onclick=function(ev){
+    var b=ev.target.closest("[data-tab]"); if(!b) return;
+    filesTab=b.getAttribute("data-tab"); q("files-msg").textContent=""; renderFiles();
+  };
+  q("files-grid").onclick=function(ev){
+    var b=ev.target.closest("[data-i]"); if(!b) return;
+    var d=docsIn(filesTab)[+b.getAttribute("data-i")];
+    if(!d) return;
+    if(d.missing){ openForm("docmeta",d); return; }
+    if(d.kind==="pdf"){ openForm("docmeta",d); return; } // no in-app PDF viewer: the info form has an open button
+    openViewer(d);
+  };
+  q("files-add").onclick=function(){ q("files-menu").hidden=!q("files-menu").hidden; };
+  q("files-menu").onclick=function(ev){
+    var b=ev.target.closest("[data-add]"); if(!b) return;
+    var kind=b.getAttribute("data-add");
+    q("files-menu").hidden=true; q("files-msg").textContent="";
+    var p=kind==="files"?N.importFiles():kind==="folder"?N.importFolder():N.takePhoto();
+    p.then(function(r){
+      q("import-ov").classList.remove("show");
+      if(r.added&&r.lastCategory) filesTab=r.lastCategory;
+      applyDocs(r);
+      var parts=[];
+      if(r.added) parts.push(r.added+" eklendi");
+      if(r.skipped) parts.push(r.skipped+" zaten vardı");
+      if(r.unsupported) parts.push(r.unsupported+" desteklenmiyor");
+      if(r.failed) parts.push(r.failed+" kopyalanamadı");
+      q("files-msg").textContent=parts.join(" · ");
+      if(filesOpen()) renderFiles();
+    }).catch(function(e){
+      q("import-ov").classList.remove("show");
+      q("files-msg").textContent=(e&&e.message)||String(e);
+    });
+  };
+
+  /* ---- viewer ---- */
+  function viewerOpen(){ return q("viewer").classList.contains("show"); }
+  function openViewer(d){
+    vw.list=docsIn(d.category).filter(function(x){ return x.kind!=="pdf"&&!x.missing; });
+    vw.i=Math.max(0,vw.list.map(function(x){ return x.id; }).indexOf(d.id));
+    showDoc();
+    q("viewer").classList.add("show");
+    try{ history.pushState({viewer:1},""); }catch(e){}
+  }
+  function closeViewer(fromHistory){
+    if(!viewerOpen()) return;
+    q("viewer-stage").innerHTML="";
+    q("viewer").classList.remove("show");
+    if(!fromHistory){ ignorePop++; try{ history.back(); }catch(e){ ignorePop--; } }
+  }
+  function showDoc(){
+    var d=vw.list[vw.i]; if(!d) return;
+    q("viewer-title").textContent=d.title;
+    resetZoom();
+    q("viewer-stage").innerHTML=d.kind==="video"?
+      '<video src="'+d.url+'" controls loop playsinline autoplay muted></video>':
+      '<img src="'+d.url+'" alt="'+esc(d.title)+'" draggable="false">';
+    q("viewer-speed").hidden=d.kind!=="video";
+    setSpeed(1);
+    q("viewer-prev").disabled=vw.i<=0;
+    q("viewer-next").disabled=vw.i>=vw.list.length-1;
+  }
+  function setSpeed(r){
+    var v=q("viewer-stage").querySelector("video"); if(v) v.playbackRate=r;
+    q("viewer-speed").querySelectorAll("[data-speed]").forEach(function(b){ b.setAttribute("aria-pressed",String(+b.getAttribute("data-speed")===r)); });
+  }
+  q("viewer-speed").onclick=function(ev){ var b=ev.target.closest("[data-speed]"); if(b) setSpeed(+b.getAttribute("data-speed")); };
+  q("viewer-prev").onclick=function(){ if(vw.i>0){ vw.i--; showDoc(); } };
+  q("viewer-next").onclick=function(){ if(vw.i<vw.list.length-1){ vw.i++; showDoc(); } };
+  q("viewer-close").onclick=function(){ closeViewer(false); };
+  q("viewer-info").onclick=function(){ var d=vw.list[vw.i]; if(d) openForm("docmeta",d); };
+  q("viewer-share").onclick=function(){ var d=vw.list[vw.i]; if(d) N.shareDocument({id:d.id}).catch(function(){}); };
+
+  // Pinch / double-tap zoom and pan for photos (transform-origin 0 0 on the <img>).
+  var zm={s:1,x:0,y:0,pts:{},g:null,tap:0};
+  function zImg(){ return q("viewer-stage").querySelector("img"); }
+  function zApply(){ var im=zImg(); if(im) im.style.transform="translate("+zm.x+"px,"+zm.y+"px) scale("+zm.s+")"; }
+  function resetZoom(){ zm.s=1; zm.x=0; zm.y=0; zm.pts={}; zm.g=null; zApply(); }
+  function zAround(px,py,s){
+    s=Math.max(1,Math.min(5,s));
+    var ix=(px-zm.x)/zm.s, iy=(py-zm.y)/zm.s;
+    zm.x=px-ix*s; zm.y=py-iy*s; zm.s=s;
+    if(s===1){ zm.x=0; zm.y=0; }
+    zApply();
+  }
+  function zLocal(e){ var r=zImg().getBoundingClientRect(); return {x:e.clientX-(r.left-zm.x), y:e.clientY-(r.top-zm.y)}; }
+  var stage=q("viewer-stage");
+  stage.addEventListener("pointerdown",function(e){
+    if(!zImg()) return;
+    stage.setPointerCapture(e.pointerId);
+    zm.pts[e.pointerId]=zLocal(e);
+    var ids=Object.keys(zm.pts);
+    if(ids.length===2){
+      var a=zm.pts[ids[0]], b=zm.pts[ids[1]];
+      zm.g={d:Math.hypot(a.x-b.x,a.y-b.y), s:zm.s};
+    }else{
+      var p=zm.pts[ids[0]], now=Date.now();
+      zm.g={px:p.x, py:p.y, x:zm.x, y:zm.y};
+      if(now-zm.tap<300){ zAround(p.x,p.y,zm.s>1?1:2.5); zm.tap=0; } else zm.tap=now;
+    }
+  });
+  stage.addEventListener("pointermove",function(e){
+    if(!zm.pts[e.pointerId]||!zImg()) return;
+    zm.pts[e.pointerId]=zLocal(e);
+    var ids=Object.keys(zm.pts);
+    if(ids.length===2&&zm.g&&zm.g.d){
+      var a=zm.pts[ids[0]], b=zm.pts[ids[1]];
+      zAround((a.x+b.x)/2,(a.y+b.y)/2, zm.g.s*Math.hypot(a.x-b.x,a.y-b.y)/zm.g.d);
+    }else if(ids.length===1&&zm.s>1&&zm.g&&zm.g.px!==undefined){
+      var p=zm.pts[ids[0]];
+      zm.x=zm.g.x+(p.x-zm.g.px); zm.y=zm.g.y+(p.y-zm.g.py); zApply();
+    }
+  });
+  function zEnd(e){ delete zm.pts[e.pointerId]; zm.g=null; }
+  stage.addEventListener("pointerup",zEnd);
+  stage.addEventListener("pointercancel",zEnd);
+
+  q("card-edit").onclick=function(){
+    q("card").classList.remove("show");
+    openSettings("health",true);
+  };
+
+  /* ---- Fitbit via Health Connect (read-only; values are never stored) ---- */
+  var hc=null, mx=null, mxBusy=false;
+  var HC_NAMES={steps:"adım",exercise:"egzersiz",heartRate:"nabız",restingHr:"dinlenme nabzı",hrv:"HRV",resp:"solunum",sleep:"uyku",bp:"tansiyon"};
+  var WALK_KIND={walk:"yürüyüş",hike:"doğa yürüyüşü",run:"koşu"};
+  function fmtN(n,dec){
+    n=Number(n)||0; dec=dec||0;
+    try{ return n.toLocaleString("tr-TR",{minimumFractionDigits:dec,maximumFractionDigits:dec}); }catch(e){ return n.toFixed(dec); }
+  }
+  function fmtMin(m){ m=Math.round(m||0); return m<60?m+" dk":Math.floor(m/60)+" sa"+(m%60?" "+m%60+" dk":""); }
+  function isUp(id){ return q(id).classList.contains("show"); }
+  function pushSheet(id){
+    if(isUp(id)) return;
+    q(id).classList.add("show"); q(id).scrollTop=0;
+    try{ history.pushState({s:id},""); }catch(e){}
+  }
+  function popSheet(id,fromHistory){
+    if(!isUp(id)) return;
+    q(id).classList.remove("show");
+    if(!fromHistory){ ignorePop++; try{ history.back(); }catch(e){ ignorePop--; } }
+  }
+  function hcLinked(){ return !!(hc&&hc.linked); }
+  function applyHc(s){
+    hc=Object.assign(hc||{},s||{});
+    renderMove();
+    if(isUp("sheet")) renderHc();
+  }
+  function refreshHealth(){
+    if(!N) return;
+    N.healthStatus().then(function(s){
+      applyHc(s);
+      if(s.linked) loadMetrics(); else { mx=null; renderMove(); if(isUp("metrics")) renderMetrics(); }
+    }).catch(function(){});
+  }
+  function loadMetrics(){
+    if(mxBusy) return;
+    mxBusy=true;
+    N.getMetrics().then(function(m){
+      mxBusy=false; mx=m;
+      if(m.status) applyHc(m.status); else renderMove();
+      if(isUp("metrics")) renderMetrics();
+      if(cardOpen()) renderCard();
+    }).catch(function(){ mxBusy=false; if(isUp("metrics")) renderMetrics(); });
+  }
+  function connectHealth(){
+    var before=hc&&hc.missing?hc.missing.length:-1;
+    return N.requestHealthPermissions().then(function(s){
+      applyHc(s);
+      if(s.linked) loadMetrics();
+      // Android stops showing the dialog after repeated denials: fall back to the settings page.
+      if(s.sdk==="available"&&s.missing&&s.missing.length&&s.missing.length===before) N.openHealthSettings();
+    }).catch(function(){});
+  }
+  function onHc(ev){
+    var b=ev.target.closest("[data-hc]"); if(!b) return;
+    var a=b.getAttribute("data-hc");
+    if(a==="request") connectHealth();
+    else if(a==="manage") N.openHealthSettings();
+    else if(a==="privacy") pushSheet("privacy");
+    else if(a==="walk") N.setWalkCheck({enabled:!hc.walkCheck}).then(function(s){ applyHc(s); refresh(); }).catch(function(){});
+  }
+  function openPrivacy(){ pushSheet("privacy"); }
+  function mainWalk(walks){
+    var w=(walks||[]).filter(function(x){ return x.minutes>=10; });
+    return w.length?w[0]:null;
+  }
+  function renderMove(){ renderMoveRow(); renderBpRow(); renderOlcum(); }
+  function renderMoveRow(){
+    var row=q("move-open"), t=q("move-title"), s=q("move-sub"), a=q("move-act");
+    row.hidden=!hc;
+    if(!hc) return;
+    t.textContent="Adım"; a.textContent="aç"; q("move-val").hidden=false; q("move-val").textContent="—";
+    if(hc.sdk!=="available"){
+      s.textContent=hc.sdk==="update"?"Health Connect güncellenmeli":"Fitbit verileri için Health Connect gerekli";
+      a.textContent=hc.sdk==="update"?"güncelle":"yükle"; return;
+    }
+    if(!hc.linked){ t.textContent="Fitbit verilerini bağla"; q("move-val").hidden=true; s.textContent="adım, yürüyüş, nabız, uyku — yalnız okuma"; a.textContent="bağla"; return; }
+    var td=mx&&mx.today;
+    if(!td){ s.textContent=mx&&mx.error?"veriler okunamadı":"okunuyor…"; return; }
+    var parts=[];
+    if(td.steps!=null) q("move-val").textContent=fmtN(td.steps);
+    if(td.walks){ var w=mainWalk(td.walks); parts.push(w?"yürüyüş ✓ "+w.minutes+" dk ("+hhmm(w.start)+")":"yürüyüş henüz yok"); }
+    s.textContent=parts.join(" · ");
+  }
+  q("move-open").onclick=function(){
+    if(!hc) return;
+    if(hc.sdk!=="available") N.openHealthSettings();
+    else if(!hc.linked) connectHealth();
+    else openMetric("steps");
+  };
+  // The metrics sheet shows one section at a time; walks live in the steps section.
+  var METRIC_TITLE={steps:"Adım ve yürüyüşler",bp:"Tansiyon",rhr:"Dinlenme nabzı",sleep:"Uyku",heart:"Kalp göstergeleri"};
+  function openMetric(sec){
+    if(sec==="walks") sec="steps";
+    q("m-body").setAttribute("data-only",sec);
+    q("metrics-title").textContent=METRIC_TITLE[sec]||"Ölçümlerim";
+    pushSheet("metrics"); renderMetrics(); loadMetrics();
+  }
+
+  // Chart helpers: plain HTML bars and SVG polylines, coloured by theme tokens. Every day in a
+  // chart is a button (data-day) that opens the day screen.
+  function dkey(offset){ var d=new Date(); d.setDate(d.getDate()+offset); return key(d); }
+  function byDate(arr){ var m={}; (arr||[]).forEach(function(p){ m[p.date]=p.value; }); return m; }
+  function keyDate(k){ return new Date(+k.slice(0,4),+k.slice(5,7)-1,+k.slice(8,10)); }
+  function dayName(k){ var d=keyDate(k); return TR[d.getDay()]+" "+d.getDate()+" "+AY[d.getMonth()]; }
+  function shiftKey(k,n){ var d=keyDate(k); d.setDate(d.getDate()+n); return key(d); }
+  function bars(vals,nowIdx,labels,dates,what){
+    var hi=Math.max.apply(null,vals.concat([1]));
+    return '<div class="mbars"'+(dates?'':' aria-hidden="true"')+'>'+vals.map(function(v,i){
+      var hgt=Math.max(2,Math.round(v/hi*100))+'%', cls=i===nowIdx?' class="now"':'';
+      if(!dates) return '<i'+cls+' style="height:'+hgt+'"></i>';
+      return '<button data-day="'+dates[i]+'" aria-label="'+esc(dayName(dates[i])+", "+what(v))+'"><i'+cls+' style="--h:'+hgt+'"></i></button>';
+    }).join("")+'</div>'+(labels?'<div class="mlab" aria-hidden="true">'+labels.map(function(l){ return '<span>'+l+'</span>'; }).join("")+'</div>':"");
+  }
+  // series: one or two [{date,value}] lists sharing a scale (blood pressure: systolic, diastolic).
+  function line(series,days,cls,label,fmt){
+    series=series.filter(function(x){ return x&&x.length; });
+    if(!series.length||series[0].length<2) return "";
+    var from=new Date(); from.setHours(0,0,0,0); from.setDate(from.getDate()-(days-1));
+    var vs=[].concat.apply([],series).map(function(p){ return p.value; });
+    var lo=Math.min.apply(null,vs), hi=Math.max.apply(null,vs), span=hi-lo||1, H=cls==="sm"?34:70;
+    var polys=series.map(function(pts,si){
+      return '<polyline'+(si?' class="alt"':'')+' points="'+pts.map(function(p){
+        var i=Math.round((keyDate(p.date)-from)/864e5);
+        return ((i+0.5)/days*300).toFixed(1)+","+(3+(1-(p.value-lo)/span)*(H-6)).toFixed(1);
+      }).join(" ")+'"/>';
+    }).join("");
+    var maps=series.map(byDate), hits="", k0=key(from);
+    for(var i=0;i<days;i++){
+      var k=shiftKey(k0,i), v=maps.map(function(m){ return m[k]; }).filter(function(x){ return x!=null; });
+      hits+='<button data-day="'+k+'" aria-label="'+esc(dayName(k)+", "+(v.length===maps.length?fmt(v):"veri yok"))+'"></button>';
+    }
+    return '<div class="mchart"><svg class="mline '+(cls||"")+'" viewBox="0 0 300 '+H+'" preserveAspectRatio="none" role="img" aria-label="'+esc(label)+'">'+polys+'</svg><div class="hits">'+hits+'</div></div>';
+  }
+  function deniedP(name){ return '<p class="empty">'+name+' — izin verilmedi. <button class="mini ok" data-hc="request">İzin ver</button></p>'; }
+  function lastOf(arr){ return arr&&arr.length?arr[arr.length-1]:null; }
+  function dayLabel(date){ return date===dkey(0)?"bugün":date===dkey(-1)?"dün":fmtDate(date); }
+  function walkRow(w){
+    return '<button class="bp-row" data-day="'+key(new Date(w.start))+'"><b style="font-weight:500">'+esc(WALK_KIND[w.kind]||"yürüyüş")+' · '+w.minutes+' dk</b><span>'+hhmm(w.start)+'</span></button>';
+  }
+  var ST=[["deep","Derin"],["rem","REM"],["light","Hafif"],["awake","Uyanık"]];
+  function sleepBlock(minutes,start,end,st,when){
+    var tot=st.deep+st.light+st.rem+st.awake;
+    var h='<p class="m-big">'+fmtMin(minutes)+'</p><p class="m-sub">'+when+' · '+hhmm(start)+'–'+hhmm(end)+'</p>';
+    if(tot){
+      h+='<div class="stages" aria-hidden="true">'+ST.map(function(x){ return st[x[0]]?'<i class="st-'+x[0]+'" style="flex:'+st[x[0]]+'"></i>':""; }).join("")+'</div>'+
+        ST.map(function(x){ return '<span class="lg"><i class="st-'+x[0]+'"></i>'+x[1]+' '+fmtMin(st[x[0]])+'</span>'; }).join("");
+    }
+    return h;
+  }
+
+  /* ---- blood pressure (Omron via Health Connect) ---- */
+  function bpReadings(){ return mx&&mx.bp&&mx.bp.readings||null; }
+  function bpLabel(r,unit){ return r.sys+"/"+r.dia+(unit?" mmHg":"")+(r.pulse?" · nabız "+r.pulse:""); }
+  function avgR(v){ return Math.round(v.reduce(function(a,b){ return a+b; },0)/v.length+1e-9); }
+  // Same rounding as native BpPlan.summary, so the screen and the PDF agree.
+  function bpSummary(rows){
+    var p=rows.filter(function(r){ return r.pulse; }).map(function(r){ return r.pulse; });
+    var sy=rows.map(function(r){ return r.sys; }), di=rows.map(function(r){ return r.dia; });
+    return {count:rows.length,sys:avgR(sy),dia:avgR(di),pulse:p.length?avgR(p):null,
+      sysMin:Math.min.apply(null,sy),sysMax:Math.max.apply(null,sy),diaMin:Math.min.apply(null,di),diaMax:Math.max.apply(null,di)};
+  }
+  function bpDaily(list,days){
+    var first=dkey(-(days-1)), g={}, order=[];
+    list.forEach(function(r){
+      var k=key(new Date(r.time)); if(k<first) return;
+      if(!g[k]){ g[k]={s:[],d:[]}; order.push(k); }
+      g[k].s.push(r.sys); g[k].d.push(r.dia);
+    });
+    order.sort();
+    return {sys:order.map(function(k){ return {date:k,value:avgR(g[k].s)}; }),dia:order.map(function(k){ return {date:k,value:avgR(g[k].d)}; })};
+  }
+  function renderBpRow(){
+    var row=q("bp-open");
+    row.hidden=!hcLinked();
+    if(row.hidden) return;
+    if(mx&&(mx.denied||[]).indexOf("bp")>=0){ q("bp-val").textContent="—"; q("bp-sub").textContent="Tansiyon iznini ver"; return; }
+    var l=lastOf(bpReadings());
+    q("bp-val").textContent=l?l.sys+"/"+l.dia:"—";
+    q("bp-sub").textContent=l?(l.pulse?"nabız "+l.pulse+" · ":"")+when(l.time):(mx&&mx.status?"henüz ölçüm yok":"okunuyor…");
+  }
+  q("bp-open").onclick=function(){
+    if(mx&&(mx.denied||[]).indexOf("bp")>=0){ connectHealth(); return; }
+    openMetric("bp");
+  };
+
+  function renderMetrics(){
+    var b=q("m-body"), m=mx;
+    if(!hc||!hc.linked){
+      q("m-last").textContent="";
+      b.innerHTML='<p class="empty">Fitbit verileri bağlı değil.</p><button class="btn" data-hc="request">Fitbit verilerini bağla</button>'; return;
+    }
+    if(!m||!m.status){ q("m-last").textContent=""; b.innerHTML='<p class="empty">Okunuyor…</p>'; return; }
+    var den={}; (m.denied||[]).forEach(function(x){ den[x]=1; });
+    q("m-last").textContent=m.lastDataAt?"Son veri: "+when(m.lastDataAt)+" · bir güne dokun, o günü aç":"Bugün henüz veri yok";
+    var h=m.error?'<p class="msg bad">Health Connect geç yanıt verdi; bazı bölümler eksik olabilir.</p>':"";
+
+    // Today: steps vs the previous 7 days, walks
+    var td=m.today||{}, body="";
+    if(den.steps) body+=deniedP("Adım");
+    else if(td.steps!=null){
+      var sm=byDate(td.steps7), vals=[], labs=[], dates=[], prev=[];
+      for(var i=-7;i<=0;i++){
+        var k=dkey(i), v=i===0?td.steps:(sm[k]||0);
+        if(i<0&&sm[k]!=null) prev.push(sm[k]);
+        vals.push(v); dates.push(k); labs.push(i===0?"bugün":DAY3[keyDate(k).getDay()].slice(0,2));
+      }
+      var avg=prev.length?prev.reduce(function(x,y){ return x+y; },0)/prev.length:0;
+      body+='<p class="m-big">'+fmtN(td.steps)+' <small>adım</small></p>'+
+        (prev.length?'<p class="m-sub">önceki 7 günün ortalaması '+fmtN(avg)+'</p>':"")+
+        bars(vals,7,labs,dates,function(v){ return fmtN(v)+" adım"; });
+    }
+    if(den.exercise) body+=deniedP("Yürüyüşler");
+    else if(td.walks){
+      body+='<div style="margin-top:12px">'+(td.walks.length?td.walks.map(walkRow).join(""):'<p class="empty">Bugün yürüyüş kaydı yok.</p>')+'</div>';
+    }
+    h+='<div data-sec="steps">'+sec("Bugün",body)+'</div>';
+
+    // Resting heart rate, 30 days
+    body="";
+    if(den.restingHr) body=deniedP("Dinlenme nabzı");
+    else if(m.restingHr){
+      var rd=m.restingHr.days||[], rl=lastOf(rd);
+      if(!rl) body='<p class="empty">Henüz dinlenme nabzı yok.</p>';
+      else{
+        var rv=rd.map(function(p){ return p.value; });
+        body='<p class="m-big">'+fmtN(rl.value)+' <small>bpm · '+dayLabel(rl.date)+'</small></p>'+
+          line([rd],30,"","Son 30 gün dinlenme nabzı",function(v){ return fmtN(v[0])+" bpm"; })+
+          (rd.length>1?'<div class="axis"><span>30 gün önce</span><span>bugün</span></div>':"")+
+          '<p class="m-sub">30 günde en düşük '+fmtN(Math.min.apply(null,rv))+' · en yüksek '+fmtN(Math.max.apply(null,rv))+' bpm</p>';
+      }
+    }
+    h+='<div data-sec="rhr">'+sec("Dinlenme nabzı",body)+'</div>';
+
+    // Sleep: sessions grouped by wake-up date
+    body="";
+    if(den.sleep) body=deniedP("Uyku");
+    else if(m.sleep){
+      var nights={}, order=[];
+      (m.sleep.nights||[]).forEach(function(n){
+        var g=nights[n.date];
+        if(!g){ g=nights[n.date]={date:n.date,start:n.start,end:n.end,minutes:0,st:{deep:0,light:0,rem:0,awake:0}}; order.push(n.date); }
+        g.start=Math.min(g.start,n.start); g.end=Math.max(g.end,n.end); g.minutes+=n.minutes;
+        for(var sk in g.st) g.st[sk]+=(n.stages&&n.stages[sk])||0;
+      });
+      order.sort();
+      var ln=order.length?nights[order[order.length-1]]:null;
+      if(!ln) body='<p class="empty">Son 14 gecede uyku kaydı yok.</p>';
+      else{
+        body=sleepBlock(ln.minutes,ln.start,ln.end,ln.st,ln.date===dkey(0)?"dün gece":fmtDate(ln.date)+" sabahı");
+        var sv=[], sd=[];
+        for(var j=-13;j<=0;j++){ var nk=dkey(j); sv.push(nights[nk]?nights[nk].minutes:0); sd.push(nk); }
+        body+=bars(sv,13,null,sd,function(v){ return v?fmtMin(v)+" uyku":"uyku kaydı yok"; })+
+          '<div class="axis"><span>14 gece önce</span><span>dün gece</span></div>';
+      }
+    }
+    h+='<div data-sec="sleep">'+sec("Uyku",body)+'</div>';
+
+    // Heart indicators
+    var ht=m.heart||{}, lines=false; body="";
+    if(den.heartRate) body+=deniedP("Nabız");
+    else if(ht.hrMax!=null) body+='<div class="kv"><span>Bugün nabız</span><b>'+(ht.hrMax>0?fmtN(ht.hrMin)+"–"+fmtN(ht.hrMax)+" bpm":"veri yok")+'</b></div>';
+    [["hrv","HRV",function(v){ return fmtN(v)+" ms"; }],["resp","Solunum",function(v){ return fmtN(v,1)+" /dk"; }]].forEach(function(x){
+      if(den[x[0]]){ body+=deniedP(x[1]); return; }
+      if(!ht[x[0]]) return;
+      var l=lastOf(ht[x[0]]);
+      if(ht[x[0]].length>1) lines=true;
+      body+='<div class="kv"><span>'+x[1]+(l?" · "+dayLabel(l.date):"")+'</span><b>'+(l?x[2](l.value):"veri yok")+'</b></div>'+
+        line([ht[x[0]]],14,"sm","Son 14 gün "+x[1],function(v){ return x[2](v[0]); });
+    });
+    if(lines) body+='<p class="m-sub">Çizgiler son 14 günü gösterir.</p>';
+    h+='<div data-sec="heart">'+sec("Kalp göstergeleri",body)+'</div>';
+
+    // Blood pressure
+    body="";
+    if(den.bp) body=deniedP("Tansiyon");
+    else if(m.bp){
+      var br=m.bp.readings||[], bl=lastOf(br);
+      if(!bl) body='<p class="empty">Henüz tansiyon ölçümü yok.</p>';
+      else{
+        var daily=bpDaily(br,30);
+        body='<p class="m-big">'+bl.sys+'/'+bl.dia+' <small>mmHg'+(bl.pulse?" · nabız "+bl.pulse:"")+' · '+when(bl.time)+'</small></p>'+
+          line([daily.sys,daily.dia],30,"","Son 30 gün tansiyon",function(v){ return v[0]+"/"+v[1]+" mmHg"; })+
+          (daily.sys.length>1?'<div class="axis"><span>30 gün önce</span><span>bugün</span></div><p class="m-sub">Koyu çizgi büyük, açık çizgi küçük tansiyon (günlük ortalama).</p>':"")+
+          '<div style="margin-top:8px">'+br.slice(-10).reverse().map(function(r){
+            return '<button class="bp-row" data-day="'+key(new Date(r.time))+'"><b style="font-weight:500">'+bpLabel(r)+'</b><span>'+when(r.time)+'</span></button>';
+          }).join("")+'</div><button class="btn" id="bp-report-open">Doktor için rapor</button>';
+      }
+    }
+    h+='<div data-sec="bp">'+sec('<span id="m-bp">Tansiyon</span>',body)+'</div>';
+    b.innerHTML=h;
+  }
+  q("metrics").onclick=function(ev){
+    var d=ev.target.closest("[data-day]"); if(d){ openDay(d.getAttribute("data-day")); return; }
+    if(ev.target.id==="bp-report-open"){ openBpReport(); return; }
+    onHc(ev);
+  };
+  q("metrics-close").onclick=function(){ popSheet("metrics",false); };
+  q("privacy").onclick=onHc;
+  q("privacy-close").onclick=function(){ popSheet("privacy",false); };
+
+  /* ---- doctor report ---- */
+  var bpPeriod=30;
+  function openBpReport(){ pushSheet("bp-report"); renderBpReport(); }
+  function bpRows(){
+    var from=+keyDate(dkey(-(bpPeriod-1)));
+    return (bpReadings()||[]).filter(function(r){ return r.time>=from; }).slice().reverse();
+  }
+  function renderBpReport(){
+    q("bp-periods").innerHTML=[7,14,30,90].map(function(p){ return '<button class="tab" role="tab" data-period="'+p+'" aria-selected="'+(p===bpPeriod)+'">'+p+' gün</button>'; }).join("");
+    var rows=bpRows(), b=q("bp-report-body");
+    q("bp-pdf").disabled=!rows.length; q("bp-pdf-msg").textContent="";
+    if(!rows.length){ b.innerHTML='<p class="empty">Bu dönemde ölçüm yok.</p>'; return; }
+    var s=bpSummary(rows);
+    b.innerHTML='<p class="m-sub">'+fmtDate(dkey(-(bpPeriod-1)))+' – '+fmtDate(dkey(0))+'</p>'+
+      kv("Ölçüm sayısı",String(s.count))+kv("Ortalama",s.sys+"/"+s.dia+" mmHg"+(s.pulse?" · nabız "+s.pulse:""))+
+      kv("Büyük tansiyon aralığı",s.sysMin+"–"+s.sysMax+" mmHg")+kv("Küçük tansiyon aralığı",s.diaMin+"–"+s.diaMax+" mmHg")+
+      '<table class="bp-table"><thead><tr><th>Tarih</th><th>Saat</th><th>Büyük</th><th>Küçük</th><th>Nabız</th></tr></thead><tbody>'+
+      rows.map(function(r){ return '<tr><td>'+fmtDate(key(new Date(r.time)))+'</td><td>'+hhmm(r.time)+'</td><td>'+r.sys+'</td><td>'+r.dia+'</td><td>'+(r.pulse||"–")+'</td></tr>'; }).join("")+
+      '</tbody></table>';
+  }
+  q("bp-periods").onclick=function(ev){
+    var t=ev.target.closest("[data-period]"); if(!t) return;
+    bpPeriod=+t.getAttribute("data-period"); renderBpReport();
+  };
+  q("bp-pdf").onclick=function(){
+    var rows=bpRows(); if(!rows.length) return;
+    q("bp-pdf-msg").textContent="PDF hazırlanıyor…";
+    N.makeBpReport({from:dkey(-(bpPeriod-1)),to:dkey(0),source:(mx.bp.sources||[]).join(", ")||"Omron",
+      rows:rows.map(function(r){ return {time:r.time,sys:r.sys,dia:r.dia,pulse:r.pulse||null}; })})
+      .then(function(){ q("bp-pdf-msg").textContent=""; })
+      .catch(function(e){ q("bp-pdf-msg").textContent=(e&&e.message)||String(e); });
+  };
+  q("bp-report-close").onclick=function(){ popSheet("bp-report",false); };
+
+  /* ---- day screen ---- */
+  var HC_LABEL={steps:"Adım",exercise:"Yürüyüşler",heartRate:"Nabız",restingHr:"Dinlenme nabzı",hrv:"HRV",resp:"Solunum",sleep:"Uyku",bp:"Tansiyon"};
+  var dayDate=null, dayData=null;
+  function openDay(k){ dayDate=k; pushSheet("day"); loadDay(); }
+  function loadDay(){
+    dayData=null; renderDay();
+    var k=dayDate;
+    N.getDay({date:k}).then(function(d){ if(k===dayDate){ dayData=d; renderDay(); } })
+      .catch(function(e){ if(k===dayDate){ dayData={failed:(e&&e.message)||String(e)}; renderDay(); } });
+  }
+  function renderDay(){
+    q("day-title").textContent=dayName(dayDate);
+    q("day-prev").disabled=dayDate<=dkey(-89);
+    q("day-next").disabled=dayDate>=dkey(0);
+    var b=q("day-body"), d=dayData;
+    if(!d){ b.innerHTML='<p class="empty">Okunuyor…</p>'; return; }
+    if(d.failed){ b.innerHTML='<p class="msg bad">'+esc(d.failed)+'</p>'; return; }
+    var den={}; (d.denied||[]).forEach(function(x){ den[x]=1; });
+    function part(name,has,html){ return den[name]?deniedP(HC_LABEL[name]):(has?html:'<p class="empty">'+HC_LABEL[name]+': veri yok</p>'); }
+    var h=d.error?'<p class="msg bad">Health Connect geç yanıt verdi; bazı bölümler eksik olabilir.</p>':"";
+    h+=sec("Adım",part("steps",d.steps!=null,'<p class="m-big">'+fmtN(d.steps)+' <small>adım</small></p>')+
+      (den.exercise?deniedP("Yürüyüşler"):(d.walks&&d.walks.length?d.walks.map(function(w){
+        return '<div class="walk"><b style="font-weight:500">'+esc(WALK_KIND[w.kind]||"yürüyüş")+' · '+w.minutes+' dk</b><span>'+hhmm(w.start)+'</span></div>';
+      }).join(""):'<p class="empty">Yürüyüş kaydı yok.</p>')));
+    h+=sec("Nabız",part("restingHr",d.restingHr!=null,kv("Dinlenme nabzı",fmtN(d.restingHr)+" bpm"))+
+      part("heartRate",d.hrMax!=null,kv("En düşük–en yüksek",fmtN(d.hrMin)+"–"+fmtN(d.hrMax)+" bpm")));
+    h+=sec("HRV ve solunum",part("hrv",d.hrv!=null,kv("HRV",fmtN(d.hrv)+" ms"))+part("resp",d.resp!=null,kv("Solunum",fmtN(d.resp,1)+" /dk")));
+    h+=sec("Uyku",part("sleep",!!d.sleep,d.sleep?sleepBlock(d.sleep.minutes,d.sleep.start,d.sleep.end,d.sleep.stages,(dayDate===dkey(0)?"dün gece":fmtDate(dayDate)+" sabahı")):""));
+    h+=sec("Tansiyon",part("bp",d.bp&&d.bp.length,(d.bp||[]).map(function(r){
+      return '<div class="walk"><b style="font-weight:500">'+bpLabel(r,true)+'</b><span>'+hhmm(r.time)+'</span></div>';
+    }).join("")));
+    b.innerHTML=h;
+  }
+  q("day-prev").onclick=function(){ dayDate=shiftKey(dayDate,-1); loadDay(); };
+  q("day-next").onclick=function(){ dayDate=shiftKey(dayDate,1); loadDay(); };
+  q("day-close").onclick=function(){ popSheet("day",false); };
+  q("day").onclick=onHc;
+
+  function walkLabel(){
+    var h2=(nat&&nat.reminders||[]).filter(function(r){ return r.id==="h2"; })[0], t=h2?h2.time:"12:30";
+    var m=Math.min(+t.slice(0,2)*60+(+t.slice(3,5))+90,23*60+59);
+    return pad(Math.floor(m/60))+":"+pad(m%60);
+  }
+  function renderHc(){
+    var el=q("set-hc");
+    if(!hc){ el.innerHTML='<p class="empty">Durum okunuyor…</p>'; return; }
+    var st;
+    if(hc.sdk==="unavailable") st=["Health Connect bulunamadı",'<button class="mini ok" data-hc="manage">Yükle</button>'];
+    else if(hc.sdk==="update") st=["Health Connect güncellenmeli",'<button class="mini ok" data-hc="manage">Güncelle</button>'];
+    else if(!hc.linked) st=["Bağlı değil",'<button class="mini ok" data-hc="request">Bağla</button>'];
+    else if(hc.missing&&hc.missing.length) st=["Bağlı · eksik izin: "+esc(hc.missing.map(function(n){ return HC_NAMES[n]||n; }).join(", ")),'<button class="mini" data-hc="request">İzin ver</button>'];
+    else st=["Bağlı",'<b class="ok">✓</b>'];
+    var hint=!hc.linked?" · Fitbit bağlanınca çalışır":(!hc.background?" · arka plan okuma izni yok: yürüyüşü göremez, her gün hatırlatır":"");
+    el.innerHTML='<div class="chk"><span>'+st[0]+'</span>'+st[1]+'</div>'+
+      (hc.sdk==="available"?'<div class="chk"><span>İzinleri yönet</span><button class="mini ok" data-hc="manage">Aç</button></div>':"")+
+      '<div class="chk"><span>Öğle yürüyüşü kontrolü · '+walkLabel()+'<small style="display:block;color:var(--mute)">hafta içi; yürüyüş görünmüyorsa hatırlatır'+hint+'</small></span>'+
+      '<button class="mini'+(hc.walkCheck?" ok":"")+'" data-hc="walk" aria-pressed="'+(hc.walkCheck?"true":"false")+'">'+(hc.walkCheck?"Açık":"Kapalı")+'</button></div>'+
+      '<div class="chk"><span>Verilerini nasıl kullanıyoruz</span><button class="mini ok" data-hc="privacy">Oku</button></div>';
+  }
+  q("set-hc").onclick=onHc;
+
+  q("test-walk").onclick=function(){
+    q("test-msg").textContent="Health Connect okunuyor…";
+    N.testWalkCheck().then(function(r){
+      q("test-msg").textContent=r.decision==="WALKED"?"✓ Bugün yürüdün: "+r.reason+" — bildirim gönderildi.":
+        r.decision==="NOT_WALKED"?"Bugün henüz yürüyüş görünmüyor — hatırlatma bildirimi gönderildi.":
+        "Veri okunamadı (izin ya da Health Connect yok) — güvenli varsayılan: hatırlatma gönderildi.";
+    }).catch(function(e){ q("test-msg").textContent="Denenemedi: "+((e&&e.message)||e); });
+  };
+
+  /* ---- blood pressure measurement times ---- */
+  function renderBpTimes(){
+    var t=nat.bp&&nat.bp.times||[];
+    q("set-bp").innerHTML=t.length?t.map(function(x){ return '<div class="chk"><span>'+x+'</span><button class="mini" data-bp-rm="'+x+'" aria-label="'+x+' saatini sil">Sil</button></div>'; }).join(""):'<p class="empty">Henüz ölçüm saati yok.</p>';
+  }
+  function saveBpTimes(list){
+    return N.saveBpTimes({times:list}).then(function(st){ applyNative(st,false); q("bp-msg").textContent=""; return true; })
+      .catch(function(e){ q("bp-msg").textContent=(e&&e.message)||String(e); return false; });
+  }
+  q("bp-add").onclick=function(){
+    var v=(q("bp-new").value||"").slice(0,5);
+    if(!TIME.test(v)){ q("bp-msg").textContent="Önce bir saat seç."; return; }
+    saveBpTimes((nat.bp.times||[]).concat([v])).then(function(ok){ if(ok) q("bp-new").value=""; });
+  };
+  q("set-bp").onclick=function(ev){
+    var b=ev.target.closest("[data-bp-rm]"); if(!b) return;
+    saveBpTimes((nat.bp.times||[]).filter(function(x){ return x!==b.getAttribute("data-bp-rm"); }));
+  };
+  q("test-bp").onclick=function(){
+    q("test-msg").textContent="Health Connect okunuyor…";
+    N.testBpCheck().then(function(r){
+      q("test-msg").textContent=r.decision==="MEASURED"?"✓ Son bir saatte ölçüm var — bildirim gönderildi.":
+        r.decision==="NOT_MEASURED"?"Son bir saatte ölçüm yok — hatırlatma bildirimi gönderildi.":
+        "Veri okunamadı (izin ya da Health Connect yok) — güvenli varsayılan: hatırlatma gönderildi.";
+    }).catch(function(e){ q("test-msg").textContent="Denenemedi: "+((e&&e.message)||e); });
+  };
+
+  /* ---- tabs: Bugün · Ölçümler · Kartım · Ayarlar ---- */
+  var TABS=["bugun","olcum","kartim","ayar"], curTab="bugun";
+  // Switching tabs adds no history entry; hardware back returns to Bugün (see closeTop).
+  function switchTab(name){
+    if(TABS.indexOf(name)<0) name="bugun";
+    curTab=name;
+    TABS.forEach(function(t){
+      var on=t===name;
+      q("tab-"+t).hidden=!on;
+      q("tb-"+t).setAttribute("aria-selected",on?"true":"false");
+      q("tb-"+t).tabIndex=on?0:-1;
+    });
+    window.scrollTo(0,0);
+    renderTabs();
+    if(name==="olcum"&&hcLinked()) loadMetrics();
+    if(name==="ayar") refresh();
+  }
+  document.querySelector(".tabbar").addEventListener("click",function(ev){
+    var b=ev.target.closest("[data-tab]"); if(b) switchTab(b.getAttribute("data-tab"));
+  });
+  function renderTabs(){ renderBugun(); renderKartim(); renderAyar(); if(curTab==='olcum') renderOlcum(); }
+
+  /* ---- Ölçümler ---- */
+  function miniLine(series){
+    series=series.filter(function(x){ return x&&x.length>1; });
+    if(!series.length) return "";
+    var vs=[].concat.apply([],series).map(function(p){ return p.value; });
+    var lo=Math.min.apply(null,vs), hi=Math.max.apply(null,vs), span=hi-lo||1, n=series[0].length;
+    return '<svg class="tile-mini" viewBox="0 0 100 28" preserveAspectRatio="none" aria-hidden="true">'+series.map(function(pts,si){
+      return '<polyline'+(si?' opacity=".45"':'')+' fill="none" stroke="currentColor" stroke-width="2" vector-effect="non-scaling-stroke" stroke-linejoin="round" points="'+
+        pts.map(function(p,i){ return (i/(pts.length-1)*100).toFixed(1)+","+(3+(1-(p.value-lo)/span)*22).toFixed(1); }).join(" ")+'"/>';
+    }).join("")+'</svg>';
+  }
+  function miniBars(vals){
+    var hi=Math.max.apply(null,vals.concat([1]));
+    return '<div class="tile-mini mbars" aria-hidden="true">'+vals.map(function(v,i){
+      return '<i'+(i===vals.length-1?' class="now"':'')+' style="height:'+Math.max(6,Math.round(v/hi*100))+'%"></i>';
+    }).join("")+'</div>';
+  }
+  function otile(cls,sec,label,icon,v,sub,mini,denied){
+    return '<button class="tile '+cls+'" data-metric="'+sec+'"'+(denied?' data-hc="request"':'')+'><span class="tile-k"><span class="ic"><svg aria-hidden="true"><use href="#'+icon+'"/></svg></span>'+label+'</span>'+
+      (denied?'<small class="tile-s">izin verilmedi · dokun</small>':'<span class="tile-v">'+v+'</span>'+(sub?'<small class="tile-s">'+sub+'</small>':'')+(mini||""))+'</button>';
+  }
+  function renderOlcum(){
+    var b=q("o-body"); if(!b) return;
+    if(!hc||hc.sdk!=="available"||!hc.linked){
+      q("o-last").textContent="";
+      b.innerHTML='<button class="tile step wide" data-hc="request"><span class="tile-k"><span class="ic"><svg aria-hidden="true"><use href="#i-link"/></svg></span>Fitbit verilerini bağla</span>'+
+        '<small class="tile-s">adım, yürüyüş, nabız, uyku ve tansiyon — yalnız okuma, telefondan çıkmaz</small></button>';
+      return;
+    }
+    var m=mx;
+    if(!m||!m.status){ q("o-last").textContent=""; b.innerHTML='<p class="empty">Okunuyor…</p>'; return; }
+    var den={}; (m.denied||[]).forEach(function(x){ den[x]=1; });
+    q("o-last").textContent=(m.lastDataAt?"Son veri: "+when(m.lastDataAt):"Bugün henüz veri yok")+" · bir kutuya dokun";
+    var td=m.today||{}, sm=byDate(td.steps7), sv=[];
+    for(var i=-6;i<=0;i++) sv.push(i===0?(td.steps||0):(sm[dkey(i)]||0));
+    var steps=otile("step","steps","Adım","i-steps",td.steps!=null?fmtN(td.steps):"—","bugün",miniBars(sv),den.steps);
+    var br=bpReadings()||[], bl=lastOf(br), bd=bpDaily(br,7);
+    var bp=otile("bp","bp","Tansiyon","i-heart",bl?bl.sys+"/"+bl.dia:"—",bl?when(bl.time):"henüz ölçüm yok",miniLine([bd.sys,bd.dia]),den.bp);
+    var rd=(m.restingHr&&m.restingHr.days)||[], rl=lastOf(rd);
+    var rhr=otile("heart","rhr","Dinlenme nabzı","i-pulse",rl?fmtN(rl.value):"—",rl?"bpm · "+dayLabel(rl.date):"veri yok",miniLine([rd.slice(-14)]),den.restingHr);
+    var nights={};
+    ((m.sleep&&m.sleep.nights)||[]).forEach(function(n){ nights[n.date]=(nights[n.date]||0)+n.minutes; });
+    var nv=[], lastN=null;
+    for(var j=-6;j<=0;j++){ var k=dkey(j); nv.push(nights[k]||0); if(nights[k]) lastN=k; }
+    var sleep=otile("sleep","sleep","Uyku","i-bed",lastN?fmtMin(nights[lastN]):"—",lastN?(lastN===dkey(0)?"dün gece":fmtDate(lastN)+" sabahı"):"veri yok",miniBars(nv),den.sleep);
+    var ht=m.heart||{}, parts=[];
+    if(!den.heartRate&&ht.hrMax>0) parts.push("Nabız "+fmtN(ht.hrMin)+"–"+fmtN(ht.hrMax));
+    if(!den.hrv&&lastOf(ht.hrv)) parts.push("HRV "+fmtN(lastOf(ht.hrv).value)+" ms");
+    if(!den.resp&&lastOf(ht.resp)) parts.push("Solunum "+fmtN(lastOf(ht.resp).value,1)+"/dk");
+    var heart='<button class="tile neutral wide slim" data-metric="heart"><span class="tile-k"><span class="ic"><svg aria-hidden="true"><use href="#i-pulse"/></svg></span>Kalp göstergeleri</span><small class="tile-s">'+(parts.join(" · ")||"veri yok")+'</small></button>';
+    var w=mainWalk(td.walks);
+    var walks=den.exercise?"":'<button class="tile quit wide slim" data-metric="walks"><span class="tile-k"><span class="ic"><svg aria-hidden="true"><use href="#i-steps"/></svg></span>Yürüyüşler</span><small class="tile-s">'+
+      (w?"Bugün "+w.minutes+" dk ("+hhmm(w.start)+")":(td.walks&&td.walks.length?"bugün 10 dk altı":"bugün henüz yok"))+'</small></button>';
+    b.innerHTML='<div class="tiles">'+steps+bp+rhr+sleep+'</div>'+heart+walks;
+  }
+  q("tab-olcum").addEventListener("click",function(ev){
+    var t=ev.target.closest("[data-hc]");
+    if(t){ onHc(ev); return; }
+    var m=ev.target.closest("[data-metric]"); if(m) openMetric(m.getAttribute("data-metric"));
+  });
+
+  /* ---- Kartım ---- */
+  function apptShort(a){ var d=new Date(a.at); return d.getDate()+" "+AY[d.getMonth()].slice(0,3); }
+  function ktile(cls,k,icon,label,v,sub,wide){
+    return '<button class="tile '+cls+(wide?" wide":"")+'" data-k="'+k+'"><span class="tile-k"><span class="ic"><svg aria-hidden="true"><use href="#'+icon+'"/></svg></span>'+label+'</span>'+
+      (v!=null?'<span class="tile-v">'+v+'</span>':'')+(sub?'<small class="tile-s">'+sub+'</small>':'')+'</button>';
+  }
+  function renderKartim(){
+    var b=q("k-body"); if(!b||!nat) return;
+    var h=nat.health, p=h.profile, pr=h.procedure, now=Date.now();
+    var next=(nat.appointments||[]).filter(function(a){ return a.at>now; }).sort(function(x,y){ return x.at-y.at; })[0];
+    var tel=telOf(p.emergencyPhone);
+    var acil=[p.emergencyName?"Acil kişi: "+esc(p.emergencyName):"Acil kişi girilmedi",p.allergies?"Alerji: "+esc(p.allergies):""].filter(Boolean).join(" · ");
+    b.innerHTML=
+      ktile("med","profile","i-user","Kişisel ve acil",esc(p.bloodType||"Kan grubu —"),acil,true)+
+      (tel?'<a class="btn" href="tel:'+tel+'" style="display:block;text-align:center;text-decoration:none;margin:0 0 9px">Acil kişiyi ara</a>':'')+
+      '<div class="tiles">'+
+        ktile("heart","card","i-stent","Stentler",String(h.stents.length),pr.date?"işlem "+fmtDate(pr.date):"tam kartı aç")+
+        ktile("quit","meds","i-pill","İlaçlar",String(nat.meds.length),nat.slots.length+" doz saati")+
+        ktile("sleep","people","i-user","Doktorlar",String(nat.doctors.length),"ara / düzenle")+
+        ktile("bp","appts","i-cal","Randevu",next?esc(apptShort(next)):"—",next?esc(next.time+(next.doctorName?" · "+next.doctorName:"")):"ekle")+
+      '</div>'+
+      ktile("step slim","files","i-doc","Belgeler",null,esc(q("files-sub").textContent||"aç"),true);
+  }
+  q("tab-kartim").addEventListener("click",function(ev){
+    var t=ev.target.closest("[data-k]"); if(!t) return;
+    var k=t.getAttribute("data-k");
+    if(k==="profile") openForm("profile",nat.health.profile);
+    else if(k==="card") openCard();
+    else if(k==="meds") openSettings("meds");
+    else if(k==="people") pushSheet("people");
+    else if(k==="appts") openSettings("appts");
+    else if(k==="files") openFiles(null);
+  });
+
+  /* ---- Ayarlar: grouped list; each row shows one section of the settings sheet ---- */
+  var SGROUP_TITLE={meds:"İlaçlar",docs:"Doktorlar",appts:"Randevular",health:"Sağlık kartı bilgileri",files:"Belgeler",
+    hc:"Fitbit / Health Connect",bp:"Tansiyon ölçüm saatleri",times:"Alışkanlık saatleri",status:"Sistem durumu",tests:"Bildirim testleri",next:"Sıradaki bildirimler"};
+  function openSettings(group,replace){
+    q("sheet").setAttribute("data-group",group);
+    q("sheet-title").textContent=SGROUP_TITLE[group]||"Ayarlar";
+    openSheet(!!replace);
+  }
+  function srow(g,label,val,cls){
+    return '<button class="srow'+(cls?" "+cls:"")+'" data-group="'+g+'"><span>'+label+'</span><span class="sval">'+val+' <svg aria-hidden="true"><use href="#i-chev"/></svg></span></button>';
+  }
+  function renderAyar(){
+    var b=q("a-body"); if(!b||!nat) return;
+    var st=nat.status, bad=ISSUES.filter(function(it){ return it.bad(st); }).length;
+    b.innerHTML=
+      '<h2>Bildirimler</h2>'+
+      srow("status","Sistem durumu",bad?bad+" sorun":"✓ hepsi tamam",bad?"bad":"")+
+      srow("times","Alışkanlık saatleri",String(nat.reminders.length))+
+      srow("bp","Tansiyon ölçüm saatleri",String((nat.bp&&nat.bp.times||[]).length))+
+      srow("next","Sıradaki bildirimler","")+
+      '<h2>Veriler</h2>'+
+      srow("meds","İlaçları düzenle",String(nat.meds.length))+
+      srow("docs","Doktorlar",String(nat.doctors.length))+
+      srow("appts","Randevular",String((nat.appointments||[]).length))+
+      srow("health","Sağlık kartı bilgileri","")+
+      srow("files","Belgeler",docs?String(docs.docs.length):"")+
+      srow("hc","Fitbit / Health Connect",hc&&hc.linked?"Bağlı":"Bağlı değil")+
+      '<button class="srow" data-hc="privacy"><span>Verilerini nasıl kullanıyoruz</span><span class="sval"><svg aria-hidden="true"><use href="#i-chev"/></svg></span></button>'+
+      '<h2>Test</h2>'+
+      srow("tests","Bildirim testleri","");
+    q("set-version").textContent=nat.version?"Sürüm "+nat.version+(nat.updatedAt?" · güncellendi "+fmtDate(key(new Date(nat.updatedAt)))+" "+hhmm(nat.updatedAt):""):"";
+  }
+  q("tab-ayar").addEventListener("click",function(ev){
+    var h=ev.target.closest("[data-hc]"); if(h){ onHc(ev); return; }
+    var g=ev.target.closest("[data-group]"); if(g) openSettings(g.getAttribute("data-group"));
+  });
+
+  /* ---- Bugün ---- */
+  function renderBugun(){
+    var d=day(today()), done=SLOTS.filter(function(x){ return d.m&&d.m[x.time]; }).length;
+    q("med-count").textContent=SLOTS.length?"İlaçlar · "+done+"/"+SLOTS.length:"İlaçlar";
+    var ss=streak(function(e){return e.s;}), as=streak(function(e){return e.a;});
+    q("s-streak-tile").textContent=ss?ss+" gün":"başlamadı";
+    q("a-streak-tile").textContent=as?as+" gün":"başlamadı";
+    marks(q("s-mini"),function(e){return e.s;});
+    marks(q("a-mini"),function(e){return e.a;});
+  }
+  // The whole quit tile opens its detail, except its own "today" toggle.
+  q("tab-bugun").addEventListener("click",function(ev){
+    if(ev.target.closest(".mark-btn")) return;
+    if(ev.target.closest(".tile.quit")) pushSheet("quit");
+  });
+  q("quit-close").onclick=function(){ popSheet("quit",false); };
+  q("people-close").onclick=function(){ popSheet("people",false); };
+  q("people").addEventListener("click",function(ev){
+    var b=ev.target.closest("[data-set-group]"); if(b){ popSheet("people",false); openSettings(b.getAttribute("data-set-group")); }
+  });
+
+  function runTest(kind){
+    N.scheduleTest({kind:kind,seconds:120}).then(function(r){
+      testAt=r.at;
+      q("test-msg").textContent=(kind==="med"?"İlaç":"Alışkanlık")+" testi "+hhmmss(r.at)+" civarı gelecek. "+
+        "Uygulamayı kapatıp ekranı kilitleyebilirsin."+
+        (kind==="med"?" Aldım'a basmazsan 2 dk sonra bir kez tekrar gelir.":"")+
+        (r.exact?"":" UYARI: kesin alarm izni yok, gecikebilir.");
+    }).catch(function(e){ q("test-msg").textContent="Planlanamadı: "+((e&&e.message)||e); });
+  }
+  q("test-med").onclick=function(){ runTest("med"); };
+  q("test-habit").onclick=function(){ runTest("habit"); };
+
+  boot();
+})();
+</script>
+<script src="demo-ui.js"></script></body>
+</html>

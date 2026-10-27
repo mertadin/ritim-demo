@@ -1,0 +1,193 @@
+/* Ritim web demo: demo-only UI (.rd-*) and the desktop phone frame. App elements are not restyled. */
+.rd-btn, .rd-menu, .rd-notif, .rd-home, .rd-report, .rd-toast, .rd-intro, .rd-aside {
+  font-family: "IBM Plex Sans", system-ui, -apple-system, sans-serif;
+  --rd-surface: #ffffff; --rd-ink: #1d2326; --rd-mute: #5d6b6e; --rd-accent: #1C6A5C; --rd-rule: #dfe4e2;
+}
+@media (prefers-color-scheme: dark) {
+  .rd-btn, .rd-menu, .rd-notif, .rd-toast, .rd-intro {
+    --rd-surface: #1d2b2f; --rd-ink: #dfe8e4; --rd-mute: #9fb1b4; --rd-accent: #4FA893; --rd-rule: #2f4246;
+  }
+}
+
+/* ---- Demo pill + menu: top right of the tab headers (scrolls away with them; bottom-left covered tile values).
+   The pill is 32px tall, its ::before extends the hit area to 44px. ---- */
+.rd-btn {
+  position: absolute; z-index: 40; top: calc(env(safe-area-inset-top, 0px) + 12px); right: 12px; bottom: auto; left: auto;
+  min-width: 44px; height: 32px; padding: 0 12px; border: 0; border-radius: 16px;
+  background: rgba(20, 28, 30, .62); color: #fff; font-size: 13px; font-weight: 600; line-height: 32px; cursor: pointer;
+  -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); -webkit-tap-highlight-color: transparent;
+}
+.rd-btn::before { content: ""; position: absolute; left: -2px; right: -2px; top: -6px; bottom: -6px; }
+.rd-btn[hidden] { display: none; }
+@media (prefers-color-scheme: dark) { .rd-btn { background: rgba(58, 78, 82, .78); box-shadow: 0 0 0 1px rgba(255, 255, 255, .14); } }
+/* The pill steps aside while an app layer (sheet, viewer, urge overlay, import) is open; browsers without :has() keep it. */
+body:has(.sheet.show, #viewer.show, .ov.show, #import-ov.show) .rd-btn,
+body:has(.sheet.show, #viewer.show, .ov.show, #import-ov.show) .rd-menu { display: none; }
+/* iOS long-press on a tel: link opens a callout with "Call"; the demo never dials. */
+a[href^="tel:"] { -webkit-touch-callout: none; }
+.rd-btn:focus-visible, .rd-mi:focus-visible, .rd-n-act:focus-visible, .rd-w-take:focus-visible, .rd-h-back:focus-visible,
+.rd-r-btn:focus-visible, .rd-intro-go:focus-visible, .rd-n-main:focus-visible, .rd-w:focus-visible { outline: 2px solid #8fd3c1; outline-offset: 2px; }
+.rd-menu {
+  position: absolute; z-index: 41; top: calc(env(safe-area-inset-top, 0px) + 50px); right: 12px; bottom: auto; left: auto; width: 236px; padding: 6px 0;
+  background: var(--rd-surface); color: var(--rd-ink); border-radius: 14px; box-shadow: 0 10px 32px rgba(0, 0, 0, .28);
+}
+.rd-menu[hidden] { display: none; }
+.rd-mi {
+  display: block; width: 100%; min-height: 44px; padding: 0 16px; border: 0; background: none; color: inherit;
+  font: 500 15px/1.2 "IBM Plex Sans", system-ui, sans-serif; text-align: left; cursor: pointer;
+}
+.rd-mi:hover { background: rgba(127, 127, 127, .12); }
+.rd-mi-sep { border-bottom: 1px solid var(--rd-rule); }
+
+/* ---- notification ---- */
+.rd-notif {
+  position: fixed; z-index: 45; left: 8px; right: 8px; top: calc(env(safe-area-inset-top, 0px) + 8px);
+  background: var(--rd-surface); color: var(--rd-ink); border-radius: 22px; box-shadow: 0 10px 30px rgba(0, 0, 0, .3);
+  transform: translateY(calc(-100% - 24px)); transition: transform .25s ease-out; overflow: hidden;
+}
+.rd-notif.rd-in { transform: none; }
+.rd-n-main { padding: 14px 16px 12px; cursor: pointer; }
+.rd-n-head { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; font-size: 12px; color: var(--rd-mute); }
+.rd-n-icon {
+  width: 20px; height: 20px; border-radius: 50%; background: #1C6A5C; display: inline-flex; align-items: center; justify-content: center;
+}
+.rd-n-icon::before { content: "♥"; color: #fff; font-size: 11px; line-height: 1; }
+.rd-n-title { font-size: 15px; font-weight: 600; line-height: 1.3; }
+.rd-n-body { font-size: 14px; line-height: 1.4; margin-top: 2px; white-space: pre-line; color: var(--rd-ink); }
+.rd-n-acts { display: flex; gap: 4px; padding: 0 8px 8px; }
+.rd-n-act {
+  min-height: 44px; padding: 0 14px; border: 0; border-radius: 22px; background: none; color: var(--rd-accent);
+  font: 600 14px/1 "IBM Plex Sans", system-ui, sans-serif; cursor: pointer;
+}
+.rd-n-act:hover { background: rgba(127, 127, 127, .12); }
+
+/* ---- toast ---- */
+.rd-toast {
+  position: fixed; z-index: 60; left: 50%; bottom: calc(env(safe-area-inset-bottom, 0px) + 126px); max-width: calc(100% - 32px);
+  transform: translateX(-50%); padding: 10px 16px; border-radius: 20px; background: rgba(20, 28, 30, .92); color: #fff;
+  font-size: 14px; line-height: 1.35; text-align: center; opacity: 0; pointer-events: none; transition: opacity .2s;
+}
+.rd-toast.rd-show { opacity: 1; }
+
+/* ---- home screen (widget_med.xml / widget_summary.xml, widget_colors.xml) ---- */
+.rd-home {
+  --w-med-bg: #1C6A5C; --w-med-ink: #FFFFFF; --w-btn-bg: #FFFFFF; --w-btn-ink: #1C6A5C;
+  --w-sum-bg: #F6F4EF; --w-sum-ink: #1D2326; --w-bp-bg: #E6E4F4; --w-bp-ink: #3E3A76;
+  --w-step-bg: #F6E6D6; --w-step-ink: #7A4518; --w-quit-bg: #E7EEDC; --w-quit-ink: #3B5222;
+  position: fixed; inset: 0; z-index: 30; overflow-y: auto; color: #fff;
+  background: linear-gradient(160deg, #2c4a5a, #14232b);
+  padding: calc(env(safe-area-inset-top, 0px) + 56px) 16px calc(env(safe-area-inset-bottom, 0px) + 24px);
+  display: flex; flex-direction: column;
+}
+@media (prefers-color-scheme: dark) {
+  .rd-home {
+    --w-med-bg: #4FA893; --w-med-ink: #06201B; --w-btn-bg: #06201B; --w-btn-ink: #4FA893;
+    --w-sum-bg: #132529; --w-sum-ink: #DFE8E4; --w-bp-bg: #26243F; --w-bp-ink: #CFCBF5;
+    --w-step-bg: #3A2616; --w-step-ink: #F2CDA8; --w-quit-bg: #22301A; --w-quit-ink: #CFE3B5;
+  }
+}
+.rd-h-top { text-align: center; margin-bottom: 36px; }
+.rd-h-clock { font-size: 64px; font-weight: 300; line-height: 1; letter-spacing: -.02em; }
+.rd-h-date { font-size: 15px; margin-top: 8px; opacity: .9; }
+.rd-h-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.rd-h-cell { min-width: 0; }
+.rd-w { aspect-ratio: 1 / 1; border-radius: 18px; display: flex; flex-direction: column; cursor: pointer; overflow: hidden; }
+.rd-w-med { background: var(--w-med-bg); color: var(--w-med-ink); padding: 12px; }
+.rd-w-sum { background: var(--w-sum-bg); color: var(--w-sum-ink); padding: 10px; }
+.rd-w-k { font-size: 13px; font-weight: 500; }
+.rd-w-sum .rd-w-k { margin-bottom: 4px; }
+.rd-w-time { font-size: 24px; font-weight: 500; line-height: 1.25; }
+.rd-w-names {
+  flex: 1; min-height: 0; font-size: 13px; line-height: 1.3; overflow: hidden;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+}
+.rd-w-take {
+  height: 44px; width: 100%; border: 0; border-radius: 14px; background: var(--w-btn-bg); color: var(--w-btn-ink);
+  font: 500 15px/1 "IBM Plex Sans", system-ui, sans-serif; cursor: pointer; flex: none;
+}
+.rd-chip {
+  flex: 1; min-height: 0; display: flex; align-items: center; padding: 0 8px; border-radius: 12px; margin-bottom: 4px;
+  font-size: 13px; line-height: 1.2; overflow: hidden;
+}
+.rd-chip:last-child { margin-bottom: 0; }
+.rd-chip-bp { background: var(--w-bp-bg); color: var(--w-bp-ink); }
+.rd-chip-step { background: var(--w-step-bg); color: var(--w-step-ink); }
+.rd-chip-quit { background: var(--w-quit-bg); color: var(--w-quit-ink); }
+.rd-w-label { text-align: center; font-size: 12px; margin-top: 6px; opacity: .9; }
+.rd-h-back {
+  margin: auto auto 0; min-height: 44px; padding: 0 22px; border: 1px solid rgba(255, 255, 255, .5); border-radius: 22px;
+  background: rgba(255, 255, 255, .12); color: #fff; font: 500 15px/1 "IBM Plex Sans", system-ui, sans-serif; cursor: pointer;
+}
+
+/* ---- report page (BpReport.kt) ---- */
+.rd-report { position: fixed; inset: 0; z-index: 35; overflow-y: auto; background: #fff; color: #111; }
+.rd-r-bar {
+  position: sticky; top: 0; display: flex; align-items: center; gap: 8px; background: #f3f4f4; border-bottom: 1px solid #ddd;
+  padding: calc(env(safe-area-inset-top, 0px) + 8px) 12px 8px;
+}
+.rd-r-file { flex: 1; min-width: 0; font-size: 13px; color: #555; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rd-r-btn {
+  min-height: 44px; padding: 0 14px; border: 1px solid #c8cfcd; border-radius: 10px; background: #fff; color: #1C6A5C;
+  font: 600 14px/1 "IBM Plex Sans", system-ui, sans-serif; cursor: pointer;
+}
+.rd-r-page { padding: 24px 20px calc(env(safe-area-inset-bottom, 0px) + 32px); font-size: 13px; }
+.rd-r-h { font: 700 22px/1.3 "IBM Plex Sans", system-ui, sans-serif; letter-spacing: 0; margin: 0 0 10px; color: #111; }
+.rd-r-name { font-weight: 700; margin-bottom: 4px; }
+.rd-r-period { margin-bottom: 14px; }
+.rd-r-sum { font-weight: 700; margin-bottom: 4px; }
+.rd-r-range { margin-bottom: 18px; }
+.rd-r-table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+.rd-r-table th { text-align: left; font-weight: 700; padding: 0 6px 6px 0; border-bottom: .5px solid #999; font-size: 12px; }
+.rd-r-table td { padding: 4px 6px 3px 0; }
+.rd-r-foot { margin-top: 20px; font-size: 11px; color: #555; }
+
+/* ---- intro note ---- */
+.rd-intro {
+  position: fixed; inset: 0; z-index: 50; display: flex; align-items: center; justify-content: center; padding: 16px;
+  background: rgba(0, 0, 0, .45);
+}
+.rd-intro-card { max-width: 360px; padding: 22px 20px 16px; border-radius: 20px; background: var(--rd-surface); color: var(--rd-ink); }
+.rd-intro-card h2 { margin: 0 0 10px; font-size: 19px; font-weight: 600; letter-spacing: 0; color: var(--rd-ink); }
+.rd-intro-card p { margin: 0 0 16px; font-size: 15px; line-height: 1.5; color: var(--rd-ink); }
+.rd-intro-go {
+  display: block; width: 100%; min-height: 44px; border: 0; border-radius: 22px; background: var(--rd-accent); color: #fff;
+  font: 600 15px/1 "IBM Plex Sans", system-ui, sans-serif; cursor: pointer;
+}
+@media (prefers-color-scheme: dark) { .rd-intro-go { color: #06201B; } }
+
+.rd-aside, .rd-bezel { display: none; }
+
+/* ---- desktop phone frame: html is the 412-wide frame and the containing block for fixed layers; body scrolls ---- */
+@media (min-width: 600px) and (hover: hover) {
+  html {
+    background: #2b2f31; width: 412px; height: min(915px, calc(100vh - 48px)); margin: 24px auto 0;
+    overflow: hidden; transform: translateZ(0);
+  }
+  body { height: 100%; overflow-y: auto; overscroll-behavior: contain; }
+  /* WebKit (desktop Safari) paints the canvas around a transformed root with the body colour, not the html one:
+     a fixed backdrop behind body (html is its containing block) gives the dark surround in every engine. */
+  html::before { content: ""; position: fixed; inset: -200vh -200vw; z-index: -1; background: #2b2f31; }
+  .rd-bezel {
+    display: block; position: fixed; inset: 0; z-index: 70; pointer-events: none; border-radius: 44px;
+    box-shadow: 0 0 0 10px #101314, 0 0 0 32px #2b2f31;
+  }
+}
+@media (min-width: 1100px) and (hover: hover) {
+  .rd-aside {
+    display: block; position: fixed; z-index: 1; top: 120px; right: calc(100% + 64px); width: 260px; color: #d8dfdd;
+  }
+  .rd-aside h2 { margin: 0 0 12px; font-size: 26px; font-weight: 600; letter-spacing: 0; color: #fff; }
+  .rd-aside p { margin: 0 0 12px; font-size: 15px; line-height: 1.55; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rd-notif, .rd-toast { transition: none; }
+}
+
+@media print {
+  html, body { background: #fff !important; width: auto !important; height: auto !important; margin: 0 !important; overflow: visible !important; transform: none !important; padding: 0 !important; }
+  body > *:not(.rd-report) { display: none !important; }
+  .rd-report { position: static; overflow: visible; }
+  .rd-r-bar { display: none; }
+  .rd-r-page { padding: 0; }
+}
